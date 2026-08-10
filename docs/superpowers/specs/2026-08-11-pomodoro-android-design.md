@@ -13,7 +13,7 @@
 - UI: Jetpack Compose
 - 아키텍처 패턴: MVVM
 - 로컬 저장소: Jetpack DataStore (Preferences) — 집중/휴식 시간 설정값 영속화
-- 최소 지원 버전: minSdk 26 (Android 8.0), targetSdk 최신 안정 버전
+- 최소 지원 버전: minSdk 26 (Android 8.0), targetSdk 35 (Android 15, 구현 시점 최신 안정 버전으로 조정 가능)
 
 선정 이유: 사용자가 안드로이드/모바일 개발 경험이 없고, 이 앱은 안드로이드 전용이라 크로스플랫폼(Flutter/React Native)의 이점(iOS 동시 지원)이 필요 없다. 네이티브 스택이 공식 문서·자료가 가장 풍부하여 학습 곡선 대비 유리하다.
 
