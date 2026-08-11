@@ -45,7 +45,7 @@ class TimerService : Service() {
         val state: StateFlow<TimerState> = _state.asStateFlow()
     }
 
-    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var tickerJob: Job? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -69,6 +69,7 @@ class TimerService : Service() {
             }
             ACTION_PAUSE -> {
                 _state.value = engine.pause(now)
+                stopTicker()
                 updateOngoingNotification(_state.value)
             }
             ACTION_RESET -> {
