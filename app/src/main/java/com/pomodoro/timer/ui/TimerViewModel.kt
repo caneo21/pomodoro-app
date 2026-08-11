@@ -19,12 +19,23 @@ import kotlinx.coroutines.launch
 class TimerViewModel(
     timerState: StateFlow<TimerState>,
     private val settingsRepository: TimerSettingsRepository,
-    private val onCommand: (String) -> Unit
+    private val onCommand: (String) -> Unit,
+    private val onUpdateDurations: (Int, Int) -> Unit
 ) : ViewModel() {
 
     val uiState: StateFlow<TimerUiState> =
         combine(timerState, settingsRepository.settings, ::buildUiState)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TimerUiState())
+
+    init {
+        // DataStore replays the persisted value on subscription, so this also syncs the service's
+        // engine on cold start, not only when the user edits Settings.
+        viewModelScope.launch {
+            settingsRepository.settings.collect { settings ->
+                onUpdateDurations(settings.focusMinutes, settings.breakMinutes)
+            }
+        }
+    }
 
     fun start() = onCommand(TimerService.ACTION_START)
     fun pause() = onCommand(TimerService.ACTION_PAUSE)
@@ -46,7 +57,14 @@ class TimerViewModel(
                 val intent = Intent(appContext, TimerService::class.java).setAction(action)
                 ContextCompat.startForegroundService(appContext, intent)
             }
-            return TimerViewModel(TimerService.state, repository, onCommand) as T
+            val onUpdateDurations: (Int, Int) -> Unit = { focusMinutes, breakMinutes ->
+                val intent = Intent(appContext, TimerService::class.java)
+                    .setAction(TimerService.ACTION_UPDATE_DURATIONS)
+                    .putExtra(TimerService.EXTRA_FOCUS_MINUTES, focusMinutes)
+                    .putExtra(TimerService.EXTRA_BREAK_MINUTES, breakMinutes)
+                ContextCompat.startForegroundService(appContext, intent)
+            }
+            return TimerViewModel(TimerService.state, repository, onCommand, onUpdateDurations) as T
         }
     }
 }

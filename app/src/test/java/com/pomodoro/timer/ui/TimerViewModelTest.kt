@@ -3,13 +3,16 @@ package com.pomodoro.timer.ui
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.lifecycle.viewModelScope
 import com.pomodoro.timer.settings.TimerSettingsRepository
 import com.pomodoro.timer.timer.TimerPhase
 import com.pomodoro.timer.timer.TimerService
 import com.pomodoro.timer.timer.TimerState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -30,6 +33,7 @@ class TimerViewModelTest {
     val tempFolder = TemporaryFolder()
 
     private val dispatcher = StandardTestDispatcher()
+    private val createdViewModels = mutableListOf<TimerViewModel>()
 
     @Before
     fun setUp() {
@@ -38,6 +42,11 @@ class TimerViewModelTest {
 
     @After
     fun tearDown() {
+        // The ViewModel collects settings for the lifetime of its scope; without an onCleared
+        // equivalent the collector outlives the test and reads a deleted TemporaryFolder.
+        createdViewModels.forEach { it.viewModelScope.cancel() }
+        createdViewModels.clear()
+        dispatcher.scheduler.advanceUntilIdle()
         Dispatchers.resetMain()
     }
 
@@ -47,12 +56,21 @@ class TimerViewModelTest {
         return TimerSettingsRepository(dataStore)
     }
 
+    private fun newViewModel(
+        timerState: StateFlow<TimerState>,
+        repository: TimerSettingsRepository = newRepository(),
+        onCommand: (String) -> Unit = {},
+        onUpdateDurations: (Int, Int) -> Unit = { _, _ -> }
+    ): TimerViewModel =
+        TimerViewModel(timerState, repository, onCommand, onUpdateDurations)
+            .also { createdViewModels.add(it) }
+
     @Test
     fun `uiState reflects the injected timer state and settings`() = runTest(dispatcher) {
         val timerState = MutableStateFlow(
             TimerState(TimerPhase.BREAK, isRunning = true, remainingMillis = 120_000L, totalMillis = 300_000L)
         )
-        val viewModel = TimerViewModel(timerState, newRepository(), onCommand = {})
+        val viewModel = newViewModel(timerState)
 
         val uiState = viewModel.uiState.first { it.phase == TimerPhase.BREAK }
 
@@ -64,12 +82,12 @@ class TimerViewModelTest {
     }
 
     @Test
-    fun `start pause and reset forward the matching TimerService actions`() = runTest {
+    fun `start pause and reset forward the matching TimerService actions`() = runTest(dispatcher) {
         val timerState = MutableStateFlow(
             TimerState(TimerPhase.FOCUS, isRunning = false, remainingMillis = 1_500_000L, totalMillis = 1_500_000L)
         )
         val sentActions = mutableListOf<String>()
-        val viewModel = TimerViewModel(timerState, newRepository(), onCommand = { sentActions.add(it) })
+        val viewModel = newViewModel(timerState, onCommand = { sentActions.add(it) })
 
         viewModel.start()
         viewModel.pause()
@@ -86,13 +104,32 @@ class TimerViewModelTest {
         val timerState = MutableStateFlow(
             TimerState(TimerPhase.FOCUS, isRunning = false, remainingMillis = 1_500_000L, totalMillis = 1_500_000L)
         )
-        val repository = newRepository()
-        val viewModel = TimerViewModel(timerState, repository, onCommand = {})
+        val viewModel = newViewModel(timerState)
 
         viewModel.updateFocusMinutes(40)
 
         val focusMinutes = viewModel.uiState.first { it.focusMinutes == 40 }.focusMinutes
 
         assertEquals(40, focusMinutes)
+    }
+
+    @Test
+    fun `settings emissions are pushed to the timer service as duration updates`() = runTest(dispatcher) {
+        val timerState = MutableStateFlow(
+            TimerState(TimerPhase.FOCUS, isRunning = false, remainingMillis = 1_500_000L, totalMillis = 1_500_000L)
+        )
+        val pushedDurations = MutableStateFlow<Pair<Int, Int>?>(null)
+        val viewModel = newViewModel(
+            timerState,
+            onUpdateDurations = { focus, brk -> pushedDurations.value = focus to brk }
+        )
+
+        // Cold start: the persisted (here, default) settings reach the service without user action.
+        assertEquals(25 to 5, pushedDurations.first { it != null })
+
+        viewModel.updateFocusMinutes(40)
+        viewModel.updateBreakMinutes(10)
+
+        assertEquals(40 to 10, pushedDurations.first { it == 40 to 10 })
     }
 }
