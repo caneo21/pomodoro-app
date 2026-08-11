@@ -111,4 +111,22 @@ class TimerEngineTest {
         assertEquals(10 * 60_000L, state.remainingMillis)
         assertEquals(10 * 60_000L, state.totalMillis)
     }
+
+    @Test
+    fun `updateDurations mid-session does not change the running phase total until it flips`() {
+        val engine = TimerEngine(focusMillis, breakMillis)
+        engine.start(now = 0L)
+        engine.tick(now = 60_000L)
+
+        engine.updateDurations(focusMillis = 10 * 60_000L, breakMillis = 2 * 60_000L)
+
+        val midSession = engine.currentState(now = 60_000L)
+        assertEquals(focusMillis, midSession.totalMillis)
+        assertEquals(focusMillis - 60_000L, midSession.remainingMillis)
+        assertTrue(midSession.remainingMillis <= midSession.totalMillis)
+
+        val afterFlip = engine.tick(now = focusMillis)
+        assertEquals(TimerPhase.BREAK, afterFlip.phase)
+        assertEquals(2 * 60_000L, afterFlip.totalMillis)
+    }
 }

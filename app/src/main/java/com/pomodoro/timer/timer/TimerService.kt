@@ -6,11 +6,12 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
+import android.media.AudioAttributes
+import android.media.RingtoneManager
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.pomodoro.timer.MainActivity
-import com.pomodoro.timer.settings.TimerSettingsRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -32,12 +33,13 @@ class TimerService : Service() {
         const val EXTRA_BREAK_MINUTES = "extra_break_minutes"
 
         private const val CHANNEL_ID = "pomodoro_timer_channel"
+        private const val SESSION_END_CHANNEL_ID = "pomodoro_session_end_channel"
         private const val ONGOING_NOTIFICATION_ID = 1
         private const val SESSION_END_NOTIFICATION_ID = 2
         private const val TICK_INTERVAL_MILLIS = 1_000L
 
-        private val defaultFocusMillis = TimerSettingsRepository.DEFAULT_FOCUS_MINUTES * 60_000L
-        private val defaultBreakMillis = TimerSettingsRepository.DEFAULT_BREAK_MINUTES * 60_000L
+        private val defaultFocusMillis = TimerDefaults.DEFAULT_FOCUS_MINUTES * 60_000L
+        private val defaultBreakMillis = TimerDefaults.DEFAULT_BREAK_MINUTES * 60_000L
 
         private val engine = TimerEngine(defaultFocusMillis, defaultBreakMillis)
 
@@ -52,20 +54,20 @@ class TimerService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        createNotificationChannel()
+        createNotificationChannels()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // Every command arrives via startForegroundService, which obliges us to enter the
+        // foreground within ~5s regardless of which action it was.
+        startForeground(ONGOING_NOTIFICATION_ID, buildOngoingNotification(_state.value))
+
         val now = System.currentTimeMillis()
         when (intent?.action) {
             ACTION_START -> {
-                val previousPhase = _state.value.phase
                 _state.value = engine.start(now)
-                startForeground(ONGOING_NOTIFICATION_ID, buildOngoingNotification(_state.value))
+                updateOngoingNotification(_state.value)
                 startTicker()
-                if (previousPhase != _state.value.phase) {
-                    // no-op: start() never changes phase, kept for symmetry with tick()
-                }
             }
             ACTION_PAUSE -> {
                 _state.value = engine.pause(now)
@@ -76,15 +78,22 @@ class TimerService : Service() {
                 _state.value = engine.reset(now)
                 stopTicker()
                 stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
             }
             ACTION_UPDATE_DURATIONS -> {
-                val focusMinutes = intent.getIntExtra(EXTRA_FOCUS_MINUTES, TimerSettingsRepository.DEFAULT_FOCUS_MINUTES)
-                val breakMinutes = intent.getIntExtra(EXTRA_BREAK_MINUTES, TimerSettingsRepository.DEFAULT_BREAK_MINUTES)
+                val focusMinutes = intent.getIntExtra(EXTRA_FOCUS_MINUTES, TimerDefaults.DEFAULT_FOCUS_MINUTES)
+                val breakMinutes = intent.getIntExtra(EXTRA_BREAK_MINUTES, TimerDefaults.DEFAULT_BREAK_MINUTES)
                 engine.updateDurations(focusMinutes * 60_000L, breakMinutes * 60_000L)
                 _state.value = engine.currentState(now)
+                if (!_state.value.isRunning) {
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                    stopSelf()
+                } else {
+                    updateOngoingNotification(_state.value)
+                }
             }
         }
-        return START_STICKY
+        return START_NOT_STICKY
     }
 
     private fun startTicker() {
@@ -108,14 +117,29 @@ class TimerService : Service() {
         tickerJob = null
     }
 
-    private fun createNotificationChannel() {
+    private fun createNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Pomodoro Timer",
-                NotificationManager.IMPORTANCE_LOW
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.createNotificationChannel(
+                NotificationChannel(CHANNEL_ID, "Pomodoro Timer", NotificationManager.IMPORTANCE_LOW)
             )
-            getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+            // Channel importance overrides setPriority/setDefaults on API 26+, so session-end
+            // alerts need their own IMPORTANCE_HIGH channel to make any sound at all.
+            val sessionEndChannel = NotificationChannel(
+                SESSION_END_CHANNEL_ID,
+                "세션 종료 알림",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                enableVibration(true)
+                setSound(
+                    RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
+                    AudioAttributes.Builder()
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                        .build()
+                )
+            }
+            manager.createNotificationChannel(sessionEndChannel)
         }
     }
 
@@ -125,15 +149,24 @@ class TimerService : Service() {
         return PendingIntent.getActivity(this, 0, intent, flags)
     }
 
+    private fun pauseActionIntent(): PendingIntent {
+        val intent = Intent(this, TimerService::class.java).setAction(ACTION_PAUSE)
+        val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        return PendingIntent.getForegroundService(this, 0, intent, flags)
+    }
+
     private fun buildOngoingNotification(state: TimerState): Notification {
-        return NotificationCompat.Builder(this, CHANNEL_ID)
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_popup_reminder)
             .setContentTitle(NotificationContent.ongoingTitle(state.phase))
             .setContentText(NotificationContent.ongoingText(state.remainingMillis))
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setContentIntent(contentIntent())
-            .build()
+        if (state.isRunning) {
+            builder.addAction(android.R.drawable.ic_media_pause, "일시정지", pauseActionIntent())
+        }
+        return builder.build()
     }
 
     private fun updateOngoingNotification(state: TimerState) {
@@ -142,7 +175,7 @@ class TimerService : Service() {
     }
 
     private fun showSessionEndNotification(newPhase: TimerPhase) {
-        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+        val notification = NotificationCompat.Builder(this, SESSION_END_CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_popup_reminder)
             .setContentTitle(NotificationContent.sessionEndTitle(newPhase))
             .setPriority(NotificationCompat.PRIORITY_HIGH)

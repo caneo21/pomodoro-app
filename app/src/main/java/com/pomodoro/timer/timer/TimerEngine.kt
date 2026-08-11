@@ -9,6 +9,11 @@ class TimerEngine(
     private var endTimestamp: Long = 0L
     private var remainingWhenIdle: Long = focusMillis
 
+    // Duration the in-flight phase was entered with. Kept separate from focusMillis/breakMillis so a
+    // mid-session duration change cannot make remainingMillis exceed totalMillis; it applies on the
+    // next phase flip instead.
+    private var currentPhaseDurationMillis: Long = focusMillis
+
     private fun durationFor(phase: TimerPhase): Long =
         if (phase == TimerPhase.FOCUS) focusMillis else breakMillis
 
@@ -18,7 +23,7 @@ class TimerEngine(
             phase = phase,
             isRunning = isRunning,
             remainingMillis = remaining,
-            totalMillis = durationFor(phase)
+            totalMillis = currentPhaseDurationMillis
         )
     }
 
@@ -42,6 +47,7 @@ class TimerEngine(
         isRunning = false
         phase = TimerPhase.FOCUS
         remainingWhenIdle = focusMillis
+        currentPhaseDurationMillis = focusMillis
         return currentState(now)
     }
 
@@ -51,6 +57,7 @@ class TimerEngine(
         while (now >= endTimestamp) {
             phase = if (phase == TimerPhase.FOCUS) TimerPhase.BREAK else TimerPhase.FOCUS
             endTimestamp += durationFor(phase)
+            currentPhaseDurationMillis = durationFor(phase)
         }
         remainingWhenIdle = (endTimestamp - now).coerceAtLeast(0)
         return currentState(now)
@@ -61,6 +68,7 @@ class TimerEngine(
         this.breakMillis = breakMillis
         if (!isRunning) {
             remainingWhenIdle = durationFor(phase)
+            currentPhaseDurationMillis = durationFor(phase)
         }
     }
 }
