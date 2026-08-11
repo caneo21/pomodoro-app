@@ -48,17 +48,19 @@ class TimerViewModelTest {
     }
 
     @Test
-    fun `uiState reflects the injected timer state and settings`() = runTest {
+    fun `uiState reflects the injected timer state and settings`() = runTest(dispatcher) {
         val timerState = MutableStateFlow(
-            TimerState(TimerPhase.FOCUS, isRunning = false, remainingMillis = 1_500_000L, totalMillis = 1_500_000L)
+            TimerState(TimerPhase.BREAK, isRunning = true, remainingMillis = 120_000L, totalMillis = 300_000L)
         )
         val viewModel = TimerViewModel(timerState, newRepository(), onCommand = {})
 
-        dispatcher.scheduler.advanceUntilIdle()
+        val uiState = viewModel.uiState.first { it.phase == TimerPhase.BREAK }
 
-        assertEquals(TimerPhase.FOCUS, viewModel.uiState.value.phase)
-        assertEquals(1_500_000L, viewModel.uiState.value.remainingMillis)
-        assertEquals(25, viewModel.uiState.value.focusMinutes)
+        assertEquals(TimerPhase.BREAK, uiState.phase)
+        assertEquals(true, uiState.isRunning)
+        assertEquals(120_000L, uiState.remainingMillis)
+        assertEquals(300_000L, uiState.totalMillis)
+        assertEquals(25, uiState.focusMinutes)
     }
 
     @Test
