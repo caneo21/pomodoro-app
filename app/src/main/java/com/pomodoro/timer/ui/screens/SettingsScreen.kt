@@ -13,7 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import com.pomodoro.timer.settings.TimerSettingsRepository
+import kotlin.math.roundToInt
 
 @Composable
 fun SettingsScreen(
@@ -31,9 +31,9 @@ fun SettingsScreen(
         Text("집중 시간: ${focusMinutes}분")
         Slider(
             value = focusMinutes.toFloat(),
-            onValueChange = { onFocusMinutesChange(it.toInt()) },
-            valueRange = TimerSettingsRepository.MIN_FOCUS_MINUTES.toFloat()..TimerSettingsRepository.MAX_FOCUS_MINUTES.toFloat(),
-            steps = TimerSettingsRepository.MAX_FOCUS_MINUTES - TimerSettingsRepository.MIN_FOCUS_MINUTES - 1,
+            onValueChange = { onFocusMinutesChange(it.roundToInt()) },
+            valueRange = 5f..60f,
+            steps = 54,
             modifier = Modifier.testTag("focusSlider")
         )
 
@@ -41,9 +41,9 @@ fun SettingsScreen(
         Text("휴식 시간: ${breakMinutes}분")
         Slider(
             value = breakMinutes.toFloat(),
-            onValueChange = { onBreakMinutesChange(it.toInt()) },
-            valueRange = TimerSettingsRepository.MIN_BREAK_MINUTES.toFloat()..TimerSettingsRepository.MAX_BREAK_MINUTES.toFloat(),
-            steps = TimerSettingsRepository.MAX_BREAK_MINUTES - TimerSettingsRepository.MIN_BREAK_MINUTES - 1,
+            onValueChange = { onBreakMinutesChange(it.roundToInt()) },
+            valueRange = 1f..30f,
+            steps = 28,
             modifier = Modifier.testTag("breakSlider")
         )
 
