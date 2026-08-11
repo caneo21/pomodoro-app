@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import com.pomodoro.timer.timer.TimerDefaults
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -12,12 +13,12 @@ class TimerSettingsRepository(private val dataStore: DataStore<Preferences>) {
     companion object {
         val FOCUS_MINUTES_KEY = intPreferencesKey("focus_minutes")
         val BREAK_MINUTES_KEY = intPreferencesKey("break_minutes")
-        const val DEFAULT_FOCUS_MINUTES = 25
-        const val DEFAULT_BREAK_MINUTES = 5
-        const val MIN_FOCUS_MINUTES = 5
-        const val MAX_FOCUS_MINUTES = 60
-        const val MIN_BREAK_MINUTES = 1
-        const val MAX_BREAK_MINUTES = 30
+        const val DEFAULT_FOCUS_MINUTES = TimerDefaults.DEFAULT_FOCUS_MINUTES
+        const val DEFAULT_BREAK_MINUTES = TimerDefaults.DEFAULT_BREAK_MINUTES
+        const val MIN_FOCUS_MINUTES = TimerDefaults.MIN_FOCUS_MINUTES
+        const val MAX_FOCUS_MINUTES = TimerDefaults.MAX_FOCUS_MINUTES
+        const val MIN_BREAK_MINUTES = TimerDefaults.MIN_BREAK_MINUTES
+        const val MAX_BREAK_MINUTES = TimerDefaults.MAX_BREAK_MINUTES
     }
 
     val settings: Flow<TimerSettings> = dataStore.data.map { prefs ->
