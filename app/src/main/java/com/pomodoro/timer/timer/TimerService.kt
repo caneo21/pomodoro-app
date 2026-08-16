@@ -17,6 +17,9 @@ import com.pomodoro.timer.core.TimerDefaults
 import com.pomodoro.timer.core.TimerEngine
 import com.pomodoro.timer.core.TimerPhase
 import com.pomodoro.timer.core.TimerState
+import com.pomodoro.timer.core.SyncCoordinator
+import com.pomodoro.timer.core.SyncPayload
+import com.pomodoro.timer.sync.PlayServicesSyncTransport
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -54,12 +57,40 @@ class TimerService : Service() {
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var tickerJob: Job? = null
+    private var focusMinutes: Int = TimerDefaults.DEFAULT_FOCUS_MINUTES
+    private var breakMinutes: Int = TimerDefaults.DEFAULT_BREAK_MINUTES
+    private lateinit var syncCoordinator: SyncCoordinator
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannels()
+        syncCoordinator = SyncCoordinator(
+            transport = PlayServicesSyncTransport(applicationContext),
+            scope = serviceScope,
+            onRemoteStateIsNewer = { payload ->
+                focusMinutes = payload.focusMinutes
+                breakMinutes = payload.breakMinutes
+                _state.value = engine.adoptRemote(payload, System.currentTimeMillis())
+                updateOngoingNotification(_state.value)
+            }
+        )
+        syncCoordinator.start()
+    }
+
+    private fun publishSyncState(state: TimerState, actionAtMillis: Long) {
+        syncCoordinator.publishLocalState(
+            SyncPayload(
+                phase = state.phase,
+                isRunning = state.isRunning,
+                remainingMillis = state.remainingMillis,
+                totalMillis = state.totalMillis,
+                focusMinutes = focusMinutes,
+                breakMinutes = breakMinutes,
+                lastActionAtMillis = actionAtMillis
+            )
+        )
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -73,21 +104,24 @@ class TimerService : Service() {
                 _state.value = engine.start(now)
                 updateOngoingNotification(_state.value)
                 startTicker()
+                publishSyncState(_state.value, now)
             }
             ACTION_PAUSE -> {
                 _state.value = engine.pause(now)
                 stopTicker()
                 updateOngoingNotification(_state.value)
+                publishSyncState(_state.value, now)
             }
             ACTION_RESET -> {
                 _state.value = engine.reset(now)
                 stopTicker()
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
+                publishSyncState(_state.value, now)
             }
             ACTION_UPDATE_DURATIONS -> {
-                val focusMinutes = intent.getIntExtra(EXTRA_FOCUS_MINUTES, TimerDefaults.DEFAULT_FOCUS_MINUTES)
-                val breakMinutes = intent.getIntExtra(EXTRA_BREAK_MINUTES, TimerDefaults.DEFAULT_BREAK_MINUTES)
+                focusMinutes = intent.getIntExtra(EXTRA_FOCUS_MINUTES, TimerDefaults.DEFAULT_FOCUS_MINUTES)
+                breakMinutes = intent.getIntExtra(EXTRA_BREAK_MINUTES, TimerDefaults.DEFAULT_BREAK_MINUTES)
                 engine.updateDurations(focusMinutes * 60_000L, breakMinutes * 60_000L)
                 _state.value = engine.currentState(now)
                 if (!_state.value.isRunning) {
@@ -96,6 +130,7 @@ class TimerService : Service() {
                 } else {
                     updateOngoingNotification(_state.value)
                 }
+                publishSyncState(_state.value, now)
             }
         }
         return START_NOT_STICKY
