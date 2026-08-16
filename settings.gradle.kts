@@ -17,3 +17,4 @@ rootProject.name = "Pomodoro"
 
 include(":app")
 include(":core")
+include(":wear")
