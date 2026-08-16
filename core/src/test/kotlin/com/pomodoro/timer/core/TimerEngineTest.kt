@@ -1,4 +1,4 @@
-package com.pomodoro.timer.timer
+package com.pomodoro.timer.core
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

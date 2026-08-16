@@ -1,4 +1,4 @@
-package com.pomodoro.timer.timer
+package com.pomodoro.timer.core
 
 object TimerDefaults {
     const val DEFAULT_FOCUS_MINUTES = 25

@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 rootProject.name = "Pomodoro"
 
 include(":app")
+include(":core")

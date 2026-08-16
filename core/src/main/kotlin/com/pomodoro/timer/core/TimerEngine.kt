@@ -1,4 +1,4 @@
-package com.pomodoro.timer.timer
+package com.pomodoro.timer.core
 
 class TimerEngine(
     private var focusMillis: Long,
