@@ -4,7 +4,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import com.pomodoro.timer.timer.TimerPhase
+import com.pomodoro.timer.core.TimerPhase
 import com.pomodoro.timer.ui.TimerUiState
 import com.pomodoro.timer.ui.theme.PomodoroTheme
 import org.junit.Assert.assertTrue

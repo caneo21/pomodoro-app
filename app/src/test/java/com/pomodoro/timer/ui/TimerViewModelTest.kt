@@ -4,10 +4,10 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.viewModelScope
+import com.pomodoro.timer.core.TimerPhase
+import com.pomodoro.timer.core.TimerState
 import com.pomodoro.timer.settings.TimerSettingsRepository
-import com.pomodoro.timer.timer.TimerPhase
 import com.pomodoro.timer.timer.TimerService
-import com.pomodoro.timer.timer.TimerState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel

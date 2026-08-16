@@ -6,10 +6,10 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.pomodoro.timer.core.TimerState
 import com.pomodoro.timer.settings.TimerSettingsRepository
 import com.pomodoro.timer.settings.dataStore
 import com.pomodoro.timer.timer.TimerService
-import com.pomodoro.timer.timer.TimerState
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine

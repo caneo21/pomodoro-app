@@ -12,6 +12,11 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.pomodoro.timer.MainActivity
+import com.pomodoro.timer.core.NotificationContent
+import com.pomodoro.timer.core.TimerDefaults
+import com.pomodoro.timer.core.TimerEngine
+import com.pomodoro.timer.core.TimerPhase
+import com.pomodoro.timer.core.TimerState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

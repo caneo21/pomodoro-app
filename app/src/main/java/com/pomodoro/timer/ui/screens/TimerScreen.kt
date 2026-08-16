@@ -25,7 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import com.pomodoro.timer.timer.TimerPhase
+import com.pomodoro.timer.core.TimerPhase
 import com.pomodoro.timer.ui.TimerUiState
 
 @Composable

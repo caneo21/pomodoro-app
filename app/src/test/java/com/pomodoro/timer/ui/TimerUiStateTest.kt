@@ -1,8 +1,8 @@
 package com.pomodoro.timer.ui
 
+import com.pomodoro.timer.core.TimerPhase
+import com.pomodoro.timer.core.TimerState
 import com.pomodoro.timer.settings.TimerSettings
-import com.pomodoro.timer.timer.TimerPhase
-import com.pomodoro.timer.timer.TimerState
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

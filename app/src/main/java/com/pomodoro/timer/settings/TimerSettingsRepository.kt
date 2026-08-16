@@ -4,7 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
-import com.pomodoro.timer.timer.TimerDefaults
+import com.pomodoro.timer.core.TimerDefaults
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 

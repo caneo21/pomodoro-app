@@ -1,9 +1,9 @@
 package com.pomodoro.timer.ui
 
+import com.pomodoro.timer.core.TimerDefaults
+import com.pomodoro.timer.core.TimerPhase
+import com.pomodoro.timer.core.TimerState
 import com.pomodoro.timer.settings.TimerSettings
-import com.pomodoro.timer.timer.TimerDefaults
-import com.pomodoro.timer.timer.TimerPhase
-import com.pomodoro.timer.timer.TimerState
 
 data class TimerUiState(
     val phase: TimerPhase = TimerPhase.FOCUS,
