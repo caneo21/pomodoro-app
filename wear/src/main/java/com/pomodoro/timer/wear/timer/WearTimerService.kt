@@ -6,9 +6,13 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
+import android.media.AudioAttributes
+import android.media.RingtoneManager
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import androidx.wear.ongoing.OngoingActivity
+import androidx.wear.ongoing.Status
 import com.pomodoro.timer.core.NotificationContent
 import com.pomodoro.timer.core.TimerDefaults
 import com.pomodoro.timer.core.TimerEngine
@@ -34,6 +38,7 @@ class WearTimerService : Service() {
         const val ONGOING_NOTIFICATION_ID = 1
         private const val SESSION_END_NOTIFICATION_ID = 2
         private const val CHANNEL_ID = "pomodoro_wear_timer_channel"
+        private const val SESSION_END_CHANNEL_ID = "pomodoro_wear_session_end_channel"
         private const val TICK_INTERVAL_MILLIS = 1_000L
 
         private val defaultFocusMillis = TimerDefaults.DEFAULT_FOCUS_MINUTES * 60_000L
@@ -52,7 +57,7 @@ class WearTimerService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        createNotificationChannel()
+        createNotificationChannels()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -86,16 +91,27 @@ class WearTimerService : Service() {
     /** Replaced in Task 8 to publish sync state; no-op until then. */
     private fun onLocalStateChanged(state: TimerState, actionAtMillis: Long) = Unit
 
-    /** Replaced in Task 7 to also raise the ongoing-activity chip; plain notification until then. */
-    private fun buildOngoingNotification(state: TimerState): Notification =
-        NotificationCompat.Builder(this, CHANNEL_ID)
+    private fun buildOngoingNotification(state: TimerState): Notification {
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_popup_reminder)
             .setContentTitle(NotificationContent.ongoingTitle(state.phase))
             .setContentText(NotificationContent.ongoingText(state.remainingMillis))
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setContentIntent(contentIntent())
+
+        val status = Status.Builder()
+            .addTemplate("${NotificationContent.ongoingTitle(state.phase)} · ${NotificationContent.ongoingText(state.remainingMillis)}")
             .build()
+        OngoingActivity.Builder(applicationContext, ONGOING_NOTIFICATION_ID, builder)
+            .setStaticIcon(android.R.drawable.ic_popup_reminder)
+            .setTouchIntent(contentIntent())
+            .setStatus(status)
+            .build()
+            .apply(applicationContext)
+
+        return builder.build()
+    }
 
     private fun updateOngoingNotification(state: TimerState) {
         val manager = getSystemService(NotificationManager::class.java)
@@ -118,18 +134,44 @@ class WearTimerService : Service() {
         }
     }
 
-    /** Replaced in Task 7 to raise the session-end notification; no-op until then. */
-    private fun onSessionEnded(newState: TimerState) = Unit
+    private fun onSessionEnded(newState: TimerState) {
+        val notification = NotificationCompat.Builder(this, SESSION_END_CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_popup_reminder)
+            .setContentTitle(NotificationContent.sessionEndTitle(newState.phase))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setDefaults(NotificationCompat.DEFAULT_SOUND or NotificationCompat.DEFAULT_VIBRATE)
+            .setAutoCancel(true)
+            .setContentIntent(contentIntent())
+            .build()
+        getSystemService(NotificationManager::class.java).notify(SESSION_END_NOTIFICATION_ID, notification)
+    }
 
     private fun stopTicker() {
         tickerJob?.cancel()
         tickerJob = null
     }
 
-    private fun createNotificationChannel() {
+    private fun createNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(CHANNEL_ID, "Pomodoro Timer", NotificationManager.IMPORTANCE_LOW)
-            getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.createNotificationChannel(
+                NotificationChannel(CHANNEL_ID, "Pomodoro Timer", NotificationManager.IMPORTANCE_LOW)
+            )
+            val sessionEndChannel = NotificationChannel(
+                SESSION_END_CHANNEL_ID,
+                "세션 종료 알림",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                enableVibration(true)
+                setSound(
+                    RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
+                    AudioAttributes.Builder()
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                        .build()
+                )
+            }
+            manager.createNotificationChannel(sessionEndChannel)
         }
     }
 
