@@ -14,10 +14,13 @@ import androidx.core.app.NotificationCompat
 import androidx.wear.ongoing.OngoingActivity
 import androidx.wear.ongoing.Status
 import com.pomodoro.timer.core.NotificationContent
+import com.pomodoro.timer.core.SyncCoordinator
+import com.pomodoro.timer.core.SyncPayload
 import com.pomodoro.timer.core.TimerDefaults
 import com.pomodoro.timer.core.TimerEngine
 import com.pomodoro.timer.core.TimerState
 import com.pomodoro.timer.wear.MainActivity
+import com.pomodoro.timer.wear.sync.WearPlayServicesSyncTransport
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -52,12 +55,26 @@ class WearTimerService : Service() {
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var tickerJob: Job? = null
+    private var focusMinutes: Int = TimerDefaults.DEFAULT_FOCUS_MINUTES
+    private var breakMinutes: Int = TimerDefaults.DEFAULT_BREAK_MINUTES
+    private lateinit var syncCoordinator: SyncCoordinator
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannels()
+        syncCoordinator = SyncCoordinator(
+            transport = WearPlayServicesSyncTransport(applicationContext),
+            scope = serviceScope,
+            onRemoteStateIsNewer = { payload ->
+                focusMinutes = payload.focusMinutes
+                breakMinutes = payload.breakMinutes
+                _state.value = engine.adoptRemote(payload, System.currentTimeMillis())
+                updateOngoingNotification(_state.value)
+            }
+        )
+        syncCoordinator.start()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -88,8 +105,19 @@ class WearTimerService : Service() {
         return START_NOT_STICKY
     }
 
-    /** Replaced in Task 8 to publish sync state; no-op until then. */
-    private fun onLocalStateChanged(state: TimerState, actionAtMillis: Long) = Unit
+    private fun onLocalStateChanged(state: TimerState, actionAtMillis: Long) {
+        syncCoordinator.publishLocalState(
+            SyncPayload(
+                phase = state.phase,
+                isRunning = state.isRunning,
+                remainingMillis = state.remainingMillis,
+                totalMillis = state.totalMillis,
+                focusMinutes = focusMinutes,
+                breakMinutes = breakMinutes,
+                lastActionAtMillis = actionAtMillis
+            )
+        )
+    }
 
     private fun buildOngoingNotification(state: TimerState): Notification {
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
