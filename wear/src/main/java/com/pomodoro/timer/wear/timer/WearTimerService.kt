@@ -25,6 +25,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -47,16 +48,19 @@ class WearTimerService : Service() {
         private val defaultFocusMillis = TimerDefaults.DEFAULT_FOCUS_MINUTES * 60_000L
         private val defaultBreakMillis = TimerDefaults.DEFAULT_BREAK_MINUTES * 60_000L
 
-        val engine = TimerEngine(defaultFocusMillis, defaultBreakMillis)
+        private val engine = TimerEngine(defaultFocusMillis, defaultBreakMillis)
 
         private val _state = MutableStateFlow(engine.currentState(System.currentTimeMillis()))
         val state: StateFlow<TimerState> = _state.asStateFlow()
+
+        // Static alongside `engine`, so a service instance restart can't rewind these to the
+        // defaults while the engine still holds the user's real durations.
+        private var focusMinutes: Int = TimerDefaults.DEFAULT_FOCUS_MINUTES
+        private var breakMinutes: Int = TimerDefaults.DEFAULT_BREAK_MINUTES
     }
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var tickerJob: Job? = null
-    private var focusMinutes: Int = TimerDefaults.DEFAULT_FOCUS_MINUTES
-    private var breakMinutes: Int = TimerDefaults.DEFAULT_BREAK_MINUTES
     private lateinit var syncCoordinator: SyncCoordinator
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -64,17 +68,25 @@ class WearTimerService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannels()
+        val transport = WearPlayServicesSyncTransport(applicationContext)
         syncCoordinator = SyncCoordinator(
-            transport = WearPlayServicesSyncTransport(applicationContext),
+            transport = transport,
             scope = serviceScope,
-            onRemoteStateIsNewer = { payload ->
-                focusMinutes = payload.focusMinutes
-                breakMinutes = payload.breakMinutes
-                _state.value = engine.adoptRemote(payload, System.currentTimeMillis())
-                updateOngoingNotification(_state.value)
-            }
+            onRemoteStateIsNewer = ::applyRemoteState
         )
         syncCoordinator.start()
+        // addListener only delivers future changes, so pull whatever is already published once.
+        serviceScope.launch {
+            transport.fetchCurrentState()?.let(::applyRemoteState)
+        }
+    }
+
+    private fun applyRemoteState(payload: SyncPayload) {
+        focusMinutes = payload.focusMinutes
+        breakMinutes = payload.breakMinutes
+        _state.value = engine.adoptRemote(payload, System.currentTimeMillis())
+        if (_state.value.isRunning) startTicker() else stopTicker()
+        updateOngoingNotification(_state.value)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -96,10 +108,10 @@ class WearTimerService : Service() {
             }
             ACTION_RESET -> {
                 _state.value = engine.reset(now)
+                onLocalStateChanged(_state.value, now)
                 stopTicker()
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
-                onLocalStateChanged(_state.value, now)
             }
         }
         return START_NOT_STICKY
@@ -156,6 +168,7 @@ class WearTimerService : Service() {
                 _state.value = newState
                 if (newState.phase != previousPhase) {
                     onSessionEnded(newState)
+                    onLocalStateChanged(newState, System.currentTimeMillis())
                 }
                 updateOngoingNotification(newState)
             }
@@ -211,6 +224,7 @@ class WearTimerService : Service() {
 
     override fun onDestroy() {
         stopTicker()
+        serviceScope.cancel()
         super.onDestroy()
     }
 }

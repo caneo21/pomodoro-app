@@ -24,6 +24,7 @@ import androidx.wear.compose.material.OutlinedButton
 import androidx.wear.compose.material.CircularProgressIndicator
 import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.Text
+import com.pomodoro.timer.core.TimerPhase
 
 @Composable
 fun WearTimerScreen(
@@ -49,7 +50,7 @@ fun WearTimerScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = if (uiState.phase == com.pomodoro.timer.core.TimerPhase.FOCUS) "집중" else "휴식",
+            text = if (uiState.phase == TimerPhase.FOCUS) "집중" else "휴식",
             style = MaterialTheme.typography.title3
         )
         Spacer(Modifier.height(8.dp))

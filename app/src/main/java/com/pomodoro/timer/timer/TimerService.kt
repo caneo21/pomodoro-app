@@ -24,6 +24,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -53,12 +54,15 @@ class TimerService : Service() {
 
         private val _state = MutableStateFlow(engine.currentState(System.currentTimeMillis()))
         val state: StateFlow<TimerState> = _state.asStateFlow()
+
+        // Static alongside `engine`, so a service instance restart can't rewind these to the
+        // defaults while the engine still holds the user's real durations.
+        private var focusMinutes: Int = TimerDefaults.DEFAULT_FOCUS_MINUTES
+        private var breakMinutes: Int = TimerDefaults.DEFAULT_BREAK_MINUTES
     }
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var tickerJob: Job? = null
-    private var focusMinutes: Int = TimerDefaults.DEFAULT_FOCUS_MINUTES
-    private var breakMinutes: Int = TimerDefaults.DEFAULT_BREAK_MINUTES
     private lateinit var syncCoordinator: SyncCoordinator
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -66,17 +70,25 @@ class TimerService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannels()
+        val transport = PlayServicesSyncTransport(applicationContext)
         syncCoordinator = SyncCoordinator(
-            transport = PlayServicesSyncTransport(applicationContext),
+            transport = transport,
             scope = serviceScope,
-            onRemoteStateIsNewer = { payload ->
-                focusMinutes = payload.focusMinutes
-                breakMinutes = payload.breakMinutes
-                _state.value = engine.adoptRemote(payload, System.currentTimeMillis())
-                updateOngoingNotification(_state.value)
-            }
+            onRemoteStateIsNewer = ::applyRemoteState
         )
         syncCoordinator.start()
+        // addListener only delivers future changes, so pull whatever is already published once.
+        serviceScope.launch {
+            transport.fetchCurrentState()?.let(::applyRemoteState)
+        }
+    }
+
+    private fun applyRemoteState(payload: SyncPayload) {
+        focusMinutes = payload.focusMinutes
+        breakMinutes = payload.breakMinutes
+        _state.value = engine.adoptRemote(payload, System.currentTimeMillis())
+        if (_state.value.isRunning) startTicker() else stopTicker()
+        updateOngoingNotification(_state.value)
     }
 
     private fun publishSyncState(state: TimerState, actionAtMillis: Long) {
@@ -114,23 +126,23 @@ class TimerService : Service() {
             }
             ACTION_RESET -> {
                 _state.value = engine.reset(now)
+                publishSyncState(_state.value, now)
                 stopTicker()
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
-                publishSyncState(_state.value, now)
             }
             ACTION_UPDATE_DURATIONS -> {
                 focusMinutes = intent.getIntExtra(EXTRA_FOCUS_MINUTES, TimerDefaults.DEFAULT_FOCUS_MINUTES)
                 breakMinutes = intent.getIntExtra(EXTRA_BREAK_MINUTES, TimerDefaults.DEFAULT_BREAK_MINUTES)
                 engine.updateDurations(focusMinutes * 60_000L, breakMinutes * 60_000L)
                 _state.value = engine.currentState(now)
+                publishSyncState(_state.value, now)
                 if (!_state.value.isRunning) {
                     stopForeground(STOP_FOREGROUND_REMOVE)
                     stopSelf()
                 } else {
                     updateOngoingNotification(_state.value)
                 }
-                publishSyncState(_state.value, now)
             }
         }
         return START_NOT_STICKY
@@ -146,6 +158,7 @@ class TimerService : Service() {
                 _state.value = newState
                 if (newState.phase != previousPhase) {
                     showSessionEndNotification(newState.phase)
+                    publishSyncState(newState, System.currentTimeMillis())
                 }
                 updateOngoingNotification(newState)
             }
@@ -228,6 +241,7 @@ class TimerService : Service() {
 
     override fun onDestroy() {
         stopTicker()
+        serviceScope.cancel()
         super.onDestroy()
     }
 }

@@ -9,7 +9,9 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.pomodoro.timer.wear"
+        // Must match :app's applicationId exactly — the Wearable Data Layer only routes DataItems
+        // between phone and watch apps that share a package name.
+        applicationId = "com.pomodoro.timer"
         minSdk = 30
         targetSdk = 35
         versionCode = 1

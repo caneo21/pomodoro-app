@@ -4,9 +4,11 @@ import android.content.Context
 import com.google.android.gms.wearable.DataClient
 import com.google.android.gms.wearable.DataEvent
 import com.google.android.gms.wearable.DataEventBuffer
+import com.google.android.gms.wearable.DataMap
 import com.google.android.gms.wearable.DataMapItem
 import com.google.android.gms.wearable.PutDataMapRequest
 import com.google.android.gms.wearable.Wearable
+import com.pomodoro.timer.core.SyncKeys
 import com.pomodoro.timer.core.SyncPayload
 import com.pomodoro.timer.core.SyncTransport
 import com.pomodoro.timer.core.TimerPhase
@@ -15,21 +17,19 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
-private const val TIMER_STATE_PATH = "/pomodoro/timer_state"
-
 /** The watch-side twin of `:app`'s `PlayServicesSyncTransport` — same path, same wire format. */
 class WearPlayServicesSyncTransport(context: Context) : SyncTransport {
     private val dataClient: DataClient = Wearable.getDataClient(context.applicationContext)
 
     override suspend fun publish(payload: SyncPayload) {
-        val request = PutDataMapRequest.create(TIMER_STATE_PATH).apply {
-            dataMap.putString("phase", payload.phase.name)
-            dataMap.putBoolean("isRunning", payload.isRunning)
-            dataMap.putLong("remainingMillis", payload.remainingMillis)
-            dataMap.putLong("totalMillis", payload.totalMillis)
-            dataMap.putInt("focusMinutes", payload.focusMinutes)
-            dataMap.putInt("breakMinutes", payload.breakMinutes)
-            dataMap.putLong("lastActionAtMillis", payload.lastActionAtMillis)
+        val request = PutDataMapRequest.create(SyncKeys.TIMER_STATE_PATH).apply {
+            dataMap.putString(SyncKeys.KEY_PHASE, payload.phase.name)
+            dataMap.putBoolean(SyncKeys.KEY_IS_RUNNING, payload.isRunning)
+            dataMap.putLong(SyncKeys.KEY_REMAINING_MILLIS, payload.remainingMillis)
+            dataMap.putLong(SyncKeys.KEY_TOTAL_MILLIS, payload.totalMillis)
+            dataMap.putInt(SyncKeys.KEY_FOCUS_MINUTES, payload.focusMinutes)
+            dataMap.putInt(SyncKeys.KEY_BREAK_MINUTES, payload.breakMinutes)
+            dataMap.putLong(SyncKeys.KEY_LAST_ACTION_AT_MILLIS, payload.lastActionAtMillis)
         }.asPutDataRequest().setUrgent()
         dataClient.putDataItem(request).await()
     }
@@ -37,19 +37,10 @@ class WearPlayServicesSyncTransport(context: Context) : SyncTransport {
     override fun observeRemoteState(): Flow<SyncPayload> = callbackFlow {
         val listener = DataClient.OnDataChangedListener { events: DataEventBuffer ->
             for (event in events) {
-                if (event.type == DataEvent.TYPE_CHANGED && event.dataItem.uri.path == TIMER_STATE_PATH) {
-                    val map = DataMapItem.fromDataItem(event.dataItem).dataMap
-                    trySend(
-                        SyncPayload(
-                            phase = TimerPhase.valueOf(map.getString("phase", TimerPhase.FOCUS.name)),
-                            isRunning = map.getBoolean("isRunning"),
-                            remainingMillis = map.getLong("remainingMillis"),
-                            totalMillis = map.getLong("totalMillis"),
-                            focusMinutes = map.getInt("focusMinutes"),
-                            breakMinutes = map.getInt("breakMinutes"),
-                            lastActionAtMillis = map.getLong("lastActionAtMillis")
-                        )
-                    )
+                if (event.type == DataEvent.TYPE_CHANGED &&
+                    event.dataItem.uri.path == SyncKeys.TIMER_STATE_PATH
+                ) {
+                    trySend(decode(DataMapItem.fromDataItem(event.dataItem).dataMap))
                 }
             }
             events.release()
@@ -57,4 +48,34 @@ class WearPlayServicesSyncTransport(context: Context) : SyncTransport {
         dataClient.addListener(listener)
         awaitClose { dataClient.removeListener(listener) }
     }
+
+    /**
+     * Reads whatever state is already published, since [observeRemoteState] only ever delivers
+     * *future* changes and would otherwise leave a freshly-started service stuck on defaults.
+     */
+    suspend fun fetchCurrentState(): SyncPayload? {
+        val items = dataClient.dataItems.await()
+        try {
+            for (item in items) {
+                if (item.uri.path == SyncKeys.TIMER_STATE_PATH) {
+                    return decode(DataMapItem.fromDataItem(item).dataMap)
+                }
+            }
+        } finally {
+            items.release()
+        }
+        return null
+    }
+
+    private fun decode(map: DataMap): SyncPayload = SyncPayload(
+        phase = enumValues<TimerPhase>()
+            .firstOrNull { it.name == map.getString(SyncKeys.KEY_PHASE, TimerPhase.FOCUS.name) }
+            ?: TimerPhase.FOCUS,
+        isRunning = map.getBoolean(SyncKeys.KEY_IS_RUNNING),
+        remainingMillis = map.getLong(SyncKeys.KEY_REMAINING_MILLIS),
+        totalMillis = map.getLong(SyncKeys.KEY_TOTAL_MILLIS),
+        focusMinutes = map.getInt(SyncKeys.KEY_FOCUS_MINUTES),
+        breakMinutes = map.getInt(SyncKeys.KEY_BREAK_MINUTES),
+        lastActionAtMillis = map.getLong(SyncKeys.KEY_LAST_ACTION_AT_MILLIS)
+    )
 }
