@@ -129,4 +129,66 @@ class TimerEngineTest {
         assertEquals(TimerPhase.BREAK, afterFlip.phase)
         assertEquals(2 * 60_000L, afterFlip.totalMillis)
     }
+
+    @Test
+    fun `adoptRemote applied immediately reproduces the remote running state`() {
+        val engine = TimerEngine(focusMillis, breakMillis)
+        val payload = SyncPayload(
+            phase = TimerPhase.BREAK,
+            isRunning = true,
+            remainingMillis = 90_000L,
+            totalMillis = breakMillis,
+            focusMinutes = 25,
+            breakMinutes = 5,
+            lastActionAtMillis = 1_000_000L
+        )
+
+        val state = engine.adoptRemote(payload, now = 1_000_000L)
+
+        assertEquals(TimerPhase.BREAK, state.phase)
+        assertTrue(state.isRunning)
+        assertEquals(90_000L, state.remainingMillis)
+        assertEquals(breakMillis, state.totalMillis)
+    }
+
+    @Test
+    fun `adoptRemote accounts for elapsed time between publish and apply`() {
+        val engine = TimerEngine(focusMillis, breakMillis)
+        val payload = SyncPayload(
+            phase = TimerPhase.FOCUS,
+            isRunning = true,
+            remainingMillis = 90_000L,
+            totalMillis = focusMillis,
+            focusMinutes = 25,
+            breakMinutes = 5,
+            lastActionAtMillis = 1_000_000L
+        )
+
+        val state = engine.adoptRemote(payload, now = 1_010_000L)
+
+        assertEquals(80_000L, state.remainingMillis)
+        val laterTick = engine.tick(now = 1_015_000L)
+        assertEquals(75_000L, laterTick.remainingMillis)
+    }
+
+    @Test
+    fun `adoptRemote of a paused payload freezes at the adjusted remaining time`() {
+        val engine = TimerEngine(focusMillis, breakMillis)
+        val payload = SyncPayload(
+            phase = TimerPhase.FOCUS,
+            isRunning = false,
+            remainingMillis = 90_000L,
+            totalMillis = focusMillis,
+            focusMinutes = 25,
+            breakMinutes = 5,
+            lastActionAtMillis = 1_000_000L
+        )
+
+        val state = engine.adoptRemote(payload, now = 1_005_000L)
+
+        assertFalse(state.isRunning)
+        assertEquals(90_000L, state.remainingMillis)
+        val later = engine.currentState(now = 2_000_000L)
+        assertEquals(90_000L, later.remainingMillis)
+    }
 }

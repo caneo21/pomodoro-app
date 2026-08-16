@@ -71,4 +71,27 @@ class TimerEngine(
             currentPhaseDurationMillis = durationFor(phase)
         }
     }
+
+    /**
+     * Adopts a [SyncPayload] received from the paired device as this engine's new state, correcting
+     * for the time elapsed between when the payload was captured ([SyncPayload.lastActionAtMillis])
+     * and [now]. If that gap is large enough to have crossed a phase boundary, [remainingMillis] may
+     * briefly read 0 until the next [tick] call, which flips phases correctly from there.
+     */
+    fun adoptRemote(payload: SyncPayload, now: Long): TimerState {
+        focusMillis = payload.focusMinutes * 60_000L
+        breakMillis = payload.breakMinutes * 60_000L
+        phase = payload.phase
+        currentPhaseDurationMillis = payload.totalMillis
+        isRunning = payload.isRunning
+
+        val elapsedSincePublish = if (isRunning) (now - payload.lastActionAtMillis).coerceAtLeast(0) else 0L
+        val remainingNow = (payload.remainingMillis - elapsedSincePublish).coerceAtLeast(0)
+        if (isRunning) {
+            endTimestamp = now + remainingNow
+        } else {
+            remainingWhenIdle = remainingNow
+        }
+        return currentState(now)
+    }
 }
