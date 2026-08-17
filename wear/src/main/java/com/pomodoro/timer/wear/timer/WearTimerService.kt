@@ -47,8 +47,14 @@ class WearTimerService : Service() {
 
         private val defaultFocusMillis = TimerDefaults.DEFAULT_FOCUS_MINUTES * 60_000L
         private val defaultBreakMillis = TimerDefaults.DEFAULT_BREAK_MINUTES * 60_000L
+        private val defaultLongBreakMillis = TimerDefaults.DEFAULT_LONG_BREAK_MINUTES * 60_000L
 
-        private val engine = TimerEngine(defaultFocusMillis, defaultBreakMillis)
+        private val engine = TimerEngine(
+            defaultFocusMillis,
+            defaultBreakMillis,
+            defaultLongBreakMillis,
+            TimerDefaults.DEFAULT_POMODOROS_UNTIL_LONG_BREAK
+        )
 
         private val _state = MutableStateFlow(engine.currentState(System.currentTimeMillis()))
         val state: StateFlow<TimerState> = _state.asStateFlow()
@@ -57,6 +63,13 @@ class WearTimerService : Service() {
         // defaults while the engine still holds the user's real durations.
         private var focusMinutes: Int = TimerDefaults.DEFAULT_FOCUS_MINUTES
         private var breakMinutes: Int = TimerDefaults.DEFAULT_BREAK_MINUTES
+        private var longBreakMinutes: Int = TimerDefaults.DEFAULT_LONG_BREAK_MINUTES
+
+        // Exposed as a StateFlow (rather than a plain var like the settings above) because the
+        // watch has no settings screen of its own: WearTimerUiState's cycle-progress display is the
+        // only consumer, and it needs to observe changes as they arrive from the phone.
+        private val _pomodorosUntilLongBreak = MutableStateFlow(TimerDefaults.DEFAULT_POMODOROS_UNTIL_LONG_BREAK)
+        val pomodorosUntilLongBreak: StateFlow<Int> = _pomodorosUntilLongBreak.asStateFlow()
     }
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -84,6 +97,8 @@ class WearTimerService : Service() {
     private fun applyRemoteState(payload: SyncPayload) {
         focusMinutes = payload.focusMinutes
         breakMinutes = payload.breakMinutes
+        longBreakMinutes = payload.longBreakMinutes
+        _pomodorosUntilLongBreak.value = payload.pomodorosUntilLongBreak
         _state.value = engine.adoptRemote(payload, System.currentTimeMillis())
         if (_state.value.isRunning) startTicker() else stopTicker()
         updateOngoingNotification(_state.value)
@@ -126,7 +141,10 @@ class WearTimerService : Service() {
                 totalMillis = state.totalMillis,
                 focusMinutes = focusMinutes,
                 breakMinutes = breakMinutes,
-                lastActionAtMillis = actionAtMillis
+                lastActionAtMillis = actionAtMillis,
+                longBreakMinutes = longBreakMinutes,
+                pomodorosUntilLongBreak = _pomodorosUntilLongBreak.value,
+                completedPomodoros = state.completedPomodoros
             )
         )
     }
