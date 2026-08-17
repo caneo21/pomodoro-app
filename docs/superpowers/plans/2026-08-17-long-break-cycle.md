@@ -79,7 +79,7 @@ wear/src/androidTest/java/com/pomodoro/timer/wear/ui/WearTimerScreenTest.kt     
 
 This task is a rename plus additive constants. `TimerPhase.BREAK` is renamed to `TimerPhase.SHORT_BREAK` everywhere it's referenced in `:core`; the compiler will flag any occurrence this task misses.
 
-- [ ] **Step 1: Rename `TimerPhase.BREAK` to `SHORT_BREAK` and add `LONG_BREAK`**
+- [x] **Step 1: Rename `TimerPhase.BREAK` to `SHORT_BREAK` and add `LONG_BREAK`**
 
 Replace `core/src/main/kotlin/com/pomodoro/timer/core/TimerPhase.kt` with:
 
@@ -93,7 +93,7 @@ enum class TimerPhase {
 }
 ```
 
-- [ ] **Step 2: Add long-break constants to `TimerDefaults`**
+- [x] **Step 2: Add long-break constants to `TimerDefaults`**
 
 Replace `core/src/main/kotlin/com/pomodoro/timer/core/TimerDefaults.kt` with:
 
@@ -116,7 +116,7 @@ object TimerDefaults {
 }
 ```
 
-- [ ] **Step 3: Add `completedPomodoros` to `TimerState`**
+- [x] **Step 3: Add `completedPomodoros` to `TimerState`**
 
 Replace `core/src/main/kotlin/com/pomodoro/timer/core/TimerState.kt` with:
 
@@ -132,7 +132,7 @@ data class TimerState(
 )
 ```
 
-- [ ] **Step 4: Add the `LONG_BREAK` branch to `NotificationContent`**
+- [x] **Step 4: Add the `LONG_BREAK` branch to `NotificationContent`**
 
 Replace `core/src/main/kotlin/com/pomodoro/timer/core/NotificationContent.kt` with:
 
@@ -162,7 +162,7 @@ object NotificationContent {
 }
 ```
 
-- [ ] **Step 5: Update `NotificationContentTest`**
+- [x] **Step 5: Update `NotificationContentTest`**
 
 Replace `core/src/test/kotlin/com/pomodoro/timer/core/NotificationContentTest.kt` with:
 
@@ -197,7 +197,7 @@ class NotificationContentTest {
 }
 ```
 
-- [ ] **Step 6: Rename the one `TimerPhase.BREAK` reference in `TimerEngine.kt`**
+- [x] **Step 6: Rename the one `TimerPhase.BREAK` reference in `TimerEngine.kt`**
 
 `durationFor` doesn't reference `BREAK` by name (it's an `if`/`else`), so it needs no change yet — that comes in Task 2. In `core/src/main/kotlin/com/pomodoro/timer/core/TimerEngine.kt`, replace:
 
@@ -225,7 +225,7 @@ with:
 
 (This whole function is rewritten with real long-break logic in Task 2 — this step just keeps `:core` compiling and passing in the meantime.)
 
-- [ ] **Step 7: Rename `TimerPhase.BREAK` in `TimerEngineTest.kt`**
+- [x] **Step 7: Rename `TimerPhase.BREAK` in `TimerEngineTest.kt`**
 
 In `core/src/test/kotlin/com/pomodoro/timer/core/TimerEngineTest.kt`, replace every occurrence of `TimerPhase.BREAK` with `TimerPhase.SHORT_BREAK`. There are 4 occurrences:
 - Line ~76: `assertEquals(TimerPhase.BREAK, state.phase)` in `tick past end of focus phase transitions to break without drift`
@@ -233,12 +233,12 @@ In `core/src/test/kotlin/com/pomodoro/timer/core/TimerEngineTest.kt`, replace ev
 - Line ~148: `assertEquals(TimerPhase.BREAK, state.phase)` in the same test
 - Line ~190: `assertEquals(TimerPhase.BREAK, state.phase)` in `adoptRemote crosses a phase boundary when the payload is older than its remaining time`
 
-- [ ] **Step 8: Run `:core` tests to confirm the rename didn't change behavior**
+- [x] **Step 8: Run `:core` tests to confirm the rename didn't change behavior**
 
 Run: `./gradlew.bat :core:test`
 Expected: `BUILD SUCCESSFUL`, all existing tests still pass (same count as before this task).
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add core
@@ -258,7 +258,7 @@ git commit -m "refactor: rename TimerPhase.BREAK to SHORT_BREAK and add LONG_BRE
 - Consumes: `TimerPhase.LONG_BREAK`, `TimerState.completedPomodoros`, `TimerDefaults.DEFAULT_LONG_BREAK_MINUTES`/`DEFAULT_POMODOROS_UNTIL_LONG_BREAK` (Task 1).
 - Produces: `SyncPayload.longBreakMinutes: Int = TimerDefaults.DEFAULT_LONG_BREAK_MINUTES`, `SyncPayload.pomodorosUntilLongBreak: Int = TimerDefaults.DEFAULT_POMODOROS_UNTIL_LONG_BREAK`, `SyncPayload.completedPomodoros: Int = 0`; `TimerEngine(focusMillis, shortBreakMillis, longBreakMillis = ..., pomodorosUntilLongBreak = ...)` (2 new constructor params with defaults, so the existing 2-arg call sites keep compiling); `TimerEngine.updateDurations(focusMillis, shortBreakMillis, longBreakMillis = ..., pomodorosUntilLongBreak = ...)` (same defaulting). Used by Tasks 3–10.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 In `core/src/test/kotlin/com/pomodoro/timer/core/TimerEngineTest.kt`, add one assertion to the end of the existing `tick past end of focus phase transitions to break without drift` test (it currently ends with `assertEquals(breakMillis, state.totalMillis)`):
 
@@ -402,12 +402,12 @@ Then add these new tests at the end of the class, before the final closing `}`:
     }
 ```
 
-- [ ] **Step 2: Run the tests to see them fail to compile**
+- [x] **Step 2: Run the tests to see them fail to compile**
 
 Run: `./gradlew.bat :core:test`
 Expected: compile failure — `state.completedPomodoros` and the 4-arg `TimerEngine(...)` calls don't exist yet, and `SyncPayload` has no `longBreakMinutes`/`pomodorosUntilLongBreak`/`completedPomodoros` parameters.
 
-- [ ] **Step 3: Add the new fields to `SyncPayload`**
+- [x] **Step 3: Add the new fields to `SyncPayload`**
 
 Replace `core/src/main/kotlin/com/pomodoro/timer/core/SyncPayload.kt` with:
 
@@ -435,7 +435,7 @@ data class SyncPayload(
 )
 ```
 
-- [ ] **Step 4: Rewrite `TimerEngine` with the three-phase cycle logic**
+- [x] **Step 4: Rewrite `TimerEngine` with the three-phase cycle logic**
 
 Replace `core/src/main/kotlin/com/pomodoro/timer/core/TimerEngine.kt` with:
 
@@ -598,12 +598,12 @@ class TimerEngine(
 }
 ```
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run: `./gradlew.bat :core:test`
 Expected: `BUILD SUCCESSFUL`, all `TimerEngineTest` and `NotificationContentTest` cases pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add core
@@ -623,7 +623,7 @@ git commit -m "feat: add three-phase Pomodoro cycle (long break) to TimerEngine"
 - Consumes: `TimerDefaults.DEFAULT_LONG_BREAK_MINUTES` etc. (Task 1).
 - Produces: `TimerSettings.longBreakMinutes: Int`, `TimerSettings.pomodorosUntilLongBreak: Int` (both defaulted); `TimerSettingsRepository.updateLongBreakMinutes(Int)`, `TimerSettingsRepository.updatePomodorosUntilLongBreak(Int)`. Used by Tasks 7–8.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add these tests to the end of `app/src/test/java/com/pomodoro/timer/settings/TimerSettingsRepositoryTest.kt`, before the final closing `}`:
 
@@ -668,12 +668,12 @@ Add these tests to the end of `app/src/test/java/com/pomodoro/timer/settings/Tim
     }
 ```
 
-- [ ] **Step 2: Run the tests to see them fail to compile**
+- [x] **Step 2: Run the tests to see them fail to compile**
 
 Run: `./gradlew.bat :app:testDebugUnitTest --tests "com.pomodoro.timer.settings.TimerSettingsRepositoryTest"`
 Expected: compile failure — `longBreakMinutes`, `pomodorosUntilLongBreak`, `updateLongBreakMinutes`, `updatePomodorosUntilLongBreak` don't exist yet.
 
-- [ ] **Step 3: Add the new fields to `TimerSettings`**
+- [x] **Step 3: Add the new fields to `TimerSettings`**
 
 Replace `app/src/main/java/com/pomodoro/timer/settings/TimerSettings.kt` with:
 
@@ -690,7 +690,7 @@ data class TimerSettings(
 )
 ```
 
-- [ ] **Step 4: Add the new keys and methods to `TimerSettingsRepository`**
+- [x] **Step 4: Add the new keys and methods to `TimerSettingsRepository`**
 
 Replace `app/src/main/java/com/pomodoro/timer/settings/TimerSettingsRepository.kt` with:
 
@@ -755,12 +755,12 @@ class TimerSettingsRepository(private val dataStore: DataStore<Preferences>) {
 }
 ```
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run: `./gradlew.bat :app:testDebugUnitTest --tests "com.pomodoro.timer.settings.TimerSettingsRepositoryTest"`
 Expected: `BUILD SUCCESSFUL`, all tests pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/src/main/java/com/pomodoro/timer/settings app/src/test/java/com/pomodoro/timer/settings
@@ -782,7 +782,7 @@ git commit -m "feat: add long-break settings to TimerSettings and TimerSettingsR
 
 `DataClient` requires Google Play Services and a real device to exercise, matching the existing convention in this codebase (`PlayServicesSyncTransport`/`WearPlayServicesSyncTransport` have no unit tests) — this task is verified manually in Task 11 alongside the rest of the feature.
 
-- [ ] **Step 1: Add the new keys to `SyncKeys`**
+- [x] **Step 1: Add the new keys to `SyncKeys`**
 
 Replace `core/src/main/kotlin/com/pomodoro/timer/core/SyncKeys.kt` with:
 
@@ -805,7 +805,7 @@ object SyncKeys {
 }
 ```
 
-- [ ] **Step 2: Encode/decode the new fields in `PlayServicesSyncTransport`**
+- [x] **Step 2: Encode/decode the new fields in `PlayServicesSyncTransport`**
 
 Replace `app/src/main/java/com/pomodoro/timer/sync/PlayServicesSyncTransport.kt` with:
 
@@ -904,7 +904,7 @@ class PlayServicesSyncTransport(context: Context) : SyncTransport {
 }
 ```
 
-- [ ] **Step 3: Encode/decode the new fields in `WearPlayServicesSyncTransport`**
+- [x] **Step 3: Encode/decode the new fields in `WearPlayServicesSyncTransport`**
 
 Replace `wear/src/main/java/com/pomodoro/timer/wear/sync/WearPlayServicesSyncTransport.kt` with:
 
@@ -998,12 +998,12 @@ class WearPlayServicesSyncTransport(context: Context) : SyncTransport {
 }
 ```
 
-- [ ] **Step 4: Build both modules to confirm they compile**
+- [x] **Step 4: Build both modules to confirm they compile**
 
 Run: `./gradlew.bat :app:assembleDebug :wear:assembleDebug`
 Expected: `BUILD SUCCESSFUL`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add core/src/main/kotlin/com/pomodoro/timer/core/SyncKeys.kt app/src/main/java/com/pomodoro/timer/sync wear/src/main/java/com/pomodoro/timer/wear/sync
@@ -1023,7 +1023,7 @@ git commit -m "feat: sync long-break settings and cycle count over the Wearable 
 
 No dedicated unit test exists for `TimerService` today (it's exercised by the instrumented `TimerServiceTest`, which doesn't reference any of the APIs this task touches and needs no changes) — this task is verified via the module build and manually in Task 11.
 
-- [ ] **Step 1: Update `TimerService`**
+- [x] **Step 1: Update `TimerService`**
 
 Replace `app/src/main/java/com/pomodoro/timer/timer/TimerService.kt` with:
 
@@ -1302,12 +1302,12 @@ class TimerService : Service() {
 }
 ```
 
-- [ ] **Step 2: Build to confirm it compiles**
+- [x] **Step 2: Build to confirm it compiles**
 
 Run: `./gradlew.bat :app:assembleDebug`
 Expected: `BUILD SUCCESSFUL`.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add app/src/main/java/com/pomodoro/timer/timer/TimerService.kt
@@ -1325,7 +1325,7 @@ git commit -m "feat: wire long-break settings and cycle sync into TimerService"
 - Consumes: same as Task 5, watch side.
 - Produces: `WearTimerService.pomodorosUntilLongBreak: StateFlow<Int>` — a companion property exposing the cycle-length setting for UI consumption, since the watch has no settings screen of its own and the only place this value is otherwise known is inside the (private) settings-tracking fields. Used by Task 9.
 
-- [ ] **Step 1: Update `WearTimerService`**
+- [x] **Step 1: Update `WearTimerService`**
 
 Replace `wear/src/main/java/com/pomodoro/timer/wear/timer/WearTimerService.kt` with:
 
@@ -1580,12 +1580,12 @@ class WearTimerService : Service() {
 }
 ```
 
-- [ ] **Step 2: Build to confirm it compiles**
+- [x] **Step 2: Build to confirm it compiles**
 
 Run: `./gradlew.bat :wear:assembleDebug`
 Expected: `BUILD SUCCESSFUL`.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add wear/src/main/java/com/pomodoro/timer/wear/timer/WearTimerService.kt
@@ -1606,7 +1606,7 @@ git commit -m "feat: wire long-break settings and cycle sync into WearTimerServi
 - Consumes: `TimerSettings.longBreakMinutes/pomodorosUntilLongBreak` (Task 3), `TimerState.completedPomodoros` (Task 1), `TimerService.EXTRA_LONG_BREAK_MINUTES/EXTRA_POMODOROS_UNTIL_LONG_BREAK` (Task 5).
 - Produces: `TimerUiState.longBreakMinutes/completedPomodoros/pomodorosUntilLongBreak` (all defaulted); `TimerViewModel.updateLongBreakMinutes(Int)`, `TimerViewModel.updatePomodorosUntilLongBreak(Int)`; `TimerViewModel`'s `onUpdateDurations` constructor parameter changes from `(Int, Int) -> Unit` to `(TimerSettings) -> Unit`. Used by Task 8.
 
-- [ ] **Step 1: Write the failing `TimerUiState` test**
+- [x] **Step 1: Write the failing `TimerUiState` test**
 
 Add this test to the end of `app/src/test/java/com/pomodoro/timer/ui/TimerUiStateTest.kt`, before the final closing `}`:
 
@@ -1637,12 +1637,12 @@ Add this test to the end of `app/src/test/java/com/pomodoro/timer/ui/TimerUiStat
     }
 ```
 
-- [ ] **Step 2: Run the test to see it fail to compile**
+- [x] **Step 2: Run the test to see it fail to compile**
 
 Run: `./gradlew.bat :app:testDebugUnitTest --tests "com.pomodoro.timer.ui.TimerUiStateTest"`
 Expected: compile failure — `TimerPhase.LONG_BREAK` compiles fine (Task 1), but `uiState.longBreakMinutes`/`pomodorosUntilLongBreak` don't exist yet.
 
-- [ ] **Step 3: Add the new fields to `TimerUiState`**
+- [x] **Step 3: Add the new fields to `TimerUiState`**
 
 Replace `app/src/main/java/com/pomodoro/timer/ui/TimerUiState.kt` with:
 
@@ -1679,12 +1679,12 @@ fun buildUiState(timer: TimerState, settings: TimerSettings): TimerUiState = Tim
 )
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `./gradlew.bat :app:testDebugUnitTest --tests "com.pomodoro.timer.ui.TimerUiStateTest"`
 Expected: `BUILD SUCCESSFUL`.
 
-- [ ] **Step 5: Write the failing `TimerViewModel` tests**
+- [x] **Step 5: Write the failing `TimerViewModel` tests**
 
 Replace `app/src/test/java/com/pomodoro/timer/ui/TimerViewModelTest.kt` with:
 
@@ -1846,12 +1846,12 @@ class TimerViewModelTest {
 }
 ```
 
-- [ ] **Step 6: Run the tests to see them fail to compile**
+- [x] **Step 6: Run the tests to see them fail to compile**
 
 Run: `./gradlew.bat :app:testDebugUnitTest --tests "com.pomodoro.timer.ui.TimerViewModelTest"`
 Expected: compile failure — `TimerViewModel`'s `onUpdateDurations` is still `(Int, Int) -> Unit`, and it has no `updateLongBreakMinutes`/`updatePomodorosUntilLongBreak` methods.
 
-- [ ] **Step 7: Update `TimerViewModel`**
+- [x] **Step 7: Update `TimerViewModel`**
 
 Replace `app/src/main/java/com/pomodoro/timer/ui/TimerViewModel.kt` with:
 
@@ -1939,12 +1939,12 @@ class TimerViewModel(
 }
 ```
 
-- [ ] **Step 8: Run the tests to verify they pass**
+- [x] **Step 8: Run the tests to verify they pass**
 
 Run: `./gradlew.bat :app:testDebugUnitTest --tests "com.pomodoro.timer.ui.TimerViewModelTest"`
 Expected: `BUILD SUCCESSFUL`.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add app/src/main/java/com/pomodoro/timer/ui/TimerUiState.kt app/src/test/java/com/pomodoro/timer/ui/TimerUiStateTest.kt app/src/main/java/com/pomodoro/timer/ui/TimerViewModel.kt app/src/test/java/com/pomodoro/timer/ui/TimerViewModelTest.kt
@@ -1968,7 +1968,7 @@ git commit -m "feat: expose long-break cycle fields through TimerUiState and Tim
 
 The instrumented tests in this task require a connected device or emulator to run (`./gradlew.bat :app:connectedDebugAndroidTest`); if none is available when executing this task, skip running them and note it, then verify manually in Task 11 alongside the rest of the feature.
 
-- [ ] **Step 1: Update `TimerScreen`**
+- [x] **Step 1: Update `TimerScreen`**
 
 Replace `app/src/main/java/com/pomodoro/timer/ui/screens/TimerScreen.kt` with:
 
@@ -2085,7 +2085,7 @@ fun formatMillis(millis: Long): String {
 }
 ```
 
-- [ ] **Step 2: Add the instrumented test for cycle progress**
+- [x] **Step 2: Add the instrumented test for cycle progress**
 
 In `app/src/androidTest/java/com/pomodoro/timer/ui/screens/TimerScreenTest.kt`, add `androidx.compose.ui.test.assertExists` to the imports (alongside the existing `androidx.compose.ui.test.*` imports), then add this test at the end of the class, before the final closing `}`:
 
@@ -2110,7 +2110,7 @@ In `app/src/androidTest/java/com/pomodoro/timer/ui/screens/TimerScreenTest.kt`, 
     }
 ```
 
-- [ ] **Step 3: Update `SettingsScreen`**
+- [x] **Step 3: Update `SettingsScreen`**
 
 Replace `app/src/main/java/com/pomodoro/timer/ui/screens/SettingsScreen.kt` with:
 
@@ -2221,7 +2221,7 @@ fun SettingsScreen(
 }
 ```
 
-- [ ] **Step 4: Add the instrumented test for the new sliders**
+- [x] **Step 4: Add the instrumented test for the new sliders**
 
 Add this test to the end of `app/src/androidTest/java/com/pomodoro/timer/ui/screens/SettingsScreenTest.kt`, before the final closing `}`:
 
@@ -2252,7 +2252,7 @@ Add this test to the end of `app/src/androidTest/java/com/pomodoro/timer/ui/scre
 
 This also requires `androidx.compose.ui.test.assertExists` in the imports — add it alongside the existing `androidx.compose.ui.test.*` imports.
 
-- [ ] **Step 5: Wire the new settings into `PomodoroApp`**
+- [x] **Step 5: Wire the new settings into `PomodoroApp`**
 
 Replace `app/src/main/java/com/pomodoro/timer/PomodoroApp.kt` with:
 
@@ -2306,7 +2306,7 @@ fun PomodoroApp(viewModel: TimerViewModel) {
 }
 ```
 
-- [ ] **Step 6: Build and run instrumented tests if a device is available**
+- [x] **Step 6: Build and run instrumented tests if a device is available**
 
 Run: `./gradlew.bat :app:assembleDebug`
 Expected: `BUILD SUCCESSFUL`.
@@ -2314,7 +2314,7 @@ Expected: `BUILD SUCCESSFUL`.
 If a device or emulator is connected, also run: `./gradlew.bat :app:connectedDebugAndroidTest`
 Expected: `BUILD SUCCESSFUL`, all `TimerScreenTest` and `SettingsScreenTest` cases pass. If no device is connected, skip this and rely on Task 11's manual verification instead.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/src/main/java/com/pomodoro/timer/ui/screens app/src/androidTest/java/com/pomodoro/timer/ui/screens app/src/main/java/com/pomodoro/timer/PomodoroApp.kt
@@ -2335,7 +2335,7 @@ git commit -m "feat: show long-break cycle progress and settings on the phone UI
 - Consumes: `TimerState.completedPomodoros` (Task 1), `WearTimerService.pomodorosUntilLongBreak: StateFlow<Int>` (Task 6).
 - Produces: `WearTimerUiState.completedPomodoros/pomodorosUntilLongBreak` (defaulted); `buildWearUiState(timer, pomodorosUntilLongBreak = ...)` (2nd param defaulted); `WearTimerViewModel`'s constructor gains a required `pomodorosUntilLongBreak: StateFlow<Int>` parameter. Used by Task 10.
 
-- [ ] **Step 1: Write the failing `WearTimerUiState` test**
+- [x] **Step 1: Write the failing `WearTimerUiState` test**
 
 Add this test to the end of `wear/src/test/java/com/pomodoro/timer/wear/ui/WearTimerUiStateTest.kt`, before the final closing `}`:
 
@@ -2359,12 +2359,12 @@ Add this test to the end of `wear/src/test/java/com/pomodoro/timer/wear/ui/WearT
     }
 ```
 
-- [ ] **Step 2: Run the test to see it fail to compile**
+- [x] **Step 2: Run the test to see it fail to compile**
 
 Run: `./gradlew.bat :wear:testDebugUnitTest --tests "com.pomodoro.timer.wear.ui.WearTimerUiStateTest"`
 Expected: compile failure — `buildWearUiState` doesn't accept a second argument yet, and `uiState.completedPomodoros`/`pomodorosUntilLongBreak` don't exist.
 
-- [ ] **Step 3: Add the new fields to `WearTimerUiState`**
+- [x] **Step 3: Add the new fields to `WearTimerUiState`**
 
 Replace `wear/src/main/java/com/pomodoro/timer/wear/ui/WearTimerUiState.kt` with:
 
@@ -2397,12 +2397,12 @@ fun buildWearUiState(
 )
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `./gradlew.bat :wear:testDebugUnitTest --tests "com.pomodoro.timer.wear.ui.WearTimerUiStateTest"`
 Expected: `BUILD SUCCESSFUL`.
 
-- [ ] **Step 5: Write the failing `WearTimerViewModel` tests**
+- [x] **Step 5: Write the failing `WearTimerViewModel` tests**
 
 Replace `wear/src/test/java/com/pomodoro/timer/wear/ui/WearTimerViewModelTest.kt` with:
 
@@ -2501,12 +2501,12 @@ class WearTimerViewModelTest {
 }
 ```
 
-- [ ] **Step 6: Run the tests to see them fail to compile**
+- [x] **Step 6: Run the tests to see them fail to compile**
 
 Run: `./gradlew.bat :wear:testDebugUnitTest --tests "com.pomodoro.timer.wear.ui.WearTimerViewModelTest"`
 Expected: compile failure — `WearTimerViewModel` doesn't accept a `pomodorosUntilLongBreak` constructor argument yet.
 
-- [ ] **Step 7: Update `WearTimerViewModel`**
+- [x] **Step 7: Update `WearTimerViewModel`**
 
 Replace `wear/src/main/java/com/pomodoro/timer/wear/ui/WearTimerViewModel.kt` with:
 
@@ -2553,12 +2553,12 @@ class WearTimerViewModel(
 }
 ```
 
-- [ ] **Step 8: Run the tests to verify they pass**
+- [x] **Step 8: Run the tests to verify they pass**
 
 Run: `./gradlew.bat :wear:testDebugUnitTest --tests "com.pomodoro.timer.wear.ui.WearTimerViewModelTest"`
 Expected: `BUILD SUCCESSFUL`.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add wear/src/main/java/com/pomodoro/timer/wear/ui/WearTimerUiState.kt wear/src/test/java/com/pomodoro/timer/wear/ui/WearTimerUiStateTest.kt wear/src/main/java/com/pomodoro/timer/wear/ui/WearTimerViewModel.kt wear/src/test/java/com/pomodoro/timer/wear/ui/WearTimerViewModelTest.kt
@@ -2579,7 +2579,7 @@ git commit -m "feat: expose long-break cycle fields through WearTimerUiState and
 
 Same as Task 8, the instrumented test here requires a connected device or emulator; if none is available, skip running it and rely on Task 11's manual verification.
 
-- [ ] **Step 1: Update `WearTimerScreen`**
+- [x] **Step 1: Update `WearTimerScreen`**
 
 Replace `wear/src/main/java/com/pomodoro/timer/wear/ui/WearTimerScreen.kt` with:
 
@@ -2691,7 +2691,7 @@ fun formatWearMillis(millis: Long): String {
 }
 ```
 
-- [ ] **Step 2: Add the instrumented test for cycle progress**
+- [x] **Step 2: Add the instrumented test for cycle progress**
 
 In `wear/src/androidTest/java/com/pomodoro/timer/wear/ui/WearTimerScreenTest.kt`, add `androidx.compose.ui.test.assertExists` to the imports (alongside the existing `androidx.compose.ui.test.*` imports), then add this test at the end of the class, before the final closing `}`:
 
@@ -2716,7 +2716,7 @@ In `wear/src/androidTest/java/com/pomodoro/timer/wear/ui/WearTimerScreenTest.kt`
     }
 ```
 
-- [ ] **Step 3: Build and run instrumented tests if a device is available**
+- [x] **Step 3: Build and run instrumented tests if a device is available**
 
 Run: `./gradlew.bat :wear:assembleDebug`
 Expected: `BUILD SUCCESSFUL`.
@@ -2724,7 +2724,7 @@ Expected: `BUILD SUCCESSFUL`.
 If a device or emulator is connected, also run: `./gradlew.bat :wear:connectedDebugAndroidTest`
 Expected: `BUILD SUCCESSFUL`, all `WearTimerScreenTest` cases pass. If no device is connected, skip this and rely on Task 11's manual verification instead.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add wear/src/main/java/com/pomodoro/timer/wear/ui/WearTimerScreen.kt wear/src/androidTest/java/com/pomodoro/timer/wear/ui/WearTimerScreenTest.kt
@@ -2737,7 +2737,7 @@ git commit -m "feat: show long-break cycle progress on the watch UI"
 
 **Files:** none (verification only)
 
-- [ ] **Step 1: Run the full unit test suite across all three modules**
+- [x] **Step 1: Run the full unit test suite across all three modules**
 
 Run:
 ```bash
@@ -2745,13 +2745,13 @@ Run:
 ```
 Expected: `BUILD SUCCESSFUL`, every test in `:core`, `:app`, and `:wear` passes.
 
-- [ ] **Step 2: Reinstall both apps on the paired phone and watch**
+- [x] **Step 2: Reinstall both apps on the paired phone and watch**
 
 ```bash
 ./gradlew.bat :app:installDebug :wear:installDebug
 ```
 
-- [ ] **Step 3: Manually verify the full cycle on real devices**
+- [x] **Step 3: Manually verify the full cycle on real devices**
 
 On the phone, open Settings and temporarily set "긴 휴식까지 뽀모도로 횟수" to 2 and "집중 시간"/"휴식 시간" to short values (e.g. 1 minute each) to make the cycle fast to observe. Then:
 1. Start the timer on the phone. Confirm the phone shows "1/2" progress under "집중".
@@ -2762,6 +2762,6 @@ On the phone, open Settings and temporarily set "긴 휴식까지 뽀모도로 �
 
 Restore the settings to their normal values (or leave them, since this is a personal app) once verification is complete.
 
-- [ ] **Step 4: Update the plan's checkboxes**
+- [x] **Step 4: Update the plan's checkboxes**
 
 Mark every checkbox in this file as complete (`- [x]`) once the above passes.
