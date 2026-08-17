@@ -3,6 +3,7 @@ package com.pomodoro.timer.ui.screens
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.*
 import com.pomodoro.timer.ui.theme.PomodoroTheme
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -48,5 +49,27 @@ class SettingsScreenTest {
 
         composeRule.onNodeWithTag("focusSlider").assertExists()
         composeRule.onNodeWithTag("breakSlider").assertExists()
+    }
+
+    @Test
+    fun longBreakSlider_and_pomodorosUntilLongBreakSlider_areDisplayed() {
+        composeRule.setContent {
+            PomodoroTheme {
+                SettingsScreen(
+                    focusMinutes = 25,
+                    breakMinutes = 5,
+                    longBreakMinutes = 15,
+                    pomodorosUntilLongBreak = 4,
+                    onFocusMinutesChange = {},
+                    onBreakMinutesChange = {},
+                    onLongBreakMinutesChange = {},
+                    onPomodorosUntilLongBreakChange = {},
+                    onBack = {}
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("longBreakSlider").assertExists()
+        composeRule.onNodeWithTag("pomodorosUntilLongBreakSlider").assertExists()
     }
 }

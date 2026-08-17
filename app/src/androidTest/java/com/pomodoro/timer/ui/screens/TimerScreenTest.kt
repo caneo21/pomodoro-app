@@ -4,6 +4,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.*
 import com.pomodoro.timer.core.TimerPhase
 import com.pomodoro.timer.ui.TimerUiState
 import com.pomodoro.timer.ui.theme.PomodoroTheme
@@ -88,5 +89,23 @@ class TimerScreenTest {
         }
 
         composeRule.onNodeWithText("12:34").assertExists()
+    }
+
+    @Test
+    fun cycleProgress_showsCompletedOverThreshold() {
+        composeRule.setContent {
+            PomodoroTheme {
+                TimerScreen(
+                    uiState = TimerUiState(completedPomodoros = 2, pomodorosUntilLongBreak = 4),
+                    onStart = {},
+                    onPause = {},
+                    onReset = {},
+                    onSettingsClick = {}
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("cycleProgressText").assertExists()
+        composeRule.onNodeWithText("2/4").assertExists()
     }
 }

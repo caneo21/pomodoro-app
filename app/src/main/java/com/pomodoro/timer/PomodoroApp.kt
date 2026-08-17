@@ -34,8 +34,12 @@ fun PomodoroApp(viewModel: TimerViewModel) {
             SettingsScreen(
                 focusMinutes = uiState.focusMinutes,
                 breakMinutes = uiState.breakMinutes,
+                longBreakMinutes = uiState.longBreakMinutes,
+                pomodorosUntilLongBreak = uiState.pomodorosUntilLongBreak,
                 onFocusMinutesChange = viewModel::updateFocusMinutes,
                 onBreakMinutesChange = viewModel::updateBreakMinutes,
+                onLongBreakMinutesChange = viewModel::updateLongBreakMinutes,
+                onPomodorosUntilLongBreakChange = viewModel::updatePomodorosUntilLongBreak,
                 onBack = { navController.popBackStack() }
             )
         }

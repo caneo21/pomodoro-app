@@ -45,10 +45,16 @@ fun TimerScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = if (uiState.phase == TimerPhase.FOCUS) "집중" else "휴식",
+            text = phaseLabel(uiState.phase),
             style = MaterialTheme.typography.headlineMedium
         )
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = "${uiState.completedPomodoros}/${uiState.pomodorosUntilLongBreak}",
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.testTag("cycleProgressText")
+        )
+        Spacer(Modifier.height(16.dp))
 
         val progress = if (uiState.totalMillis > 0) {
             uiState.remainingMillis.toFloat() / uiState.totalMillis.toFloat()
@@ -88,6 +94,12 @@ fun TimerScreen(
             Icon(Icons.Default.Settings, contentDescription = "설정")
         }
     }
+}
+
+private fun phaseLabel(phase: TimerPhase): String = when (phase) {
+    TimerPhase.FOCUS -> "집중"
+    TimerPhase.SHORT_BREAK -> "휴식"
+    TimerPhase.LONG_BREAK -> "긴 휴식"
 }
 
 fun formatMillis(millis: Long): String {

@@ -27,14 +27,22 @@ import kotlin.math.roundToInt
 fun SettingsScreen(
     focusMinutes: Int,
     breakMinutes: Int,
+    longBreakMinutes: Int = TimerDefaults.DEFAULT_LONG_BREAK_MINUTES,
+    pomodorosUntilLongBreak: Int = TimerDefaults.DEFAULT_POMODOROS_UNTIL_LONG_BREAK,
     onFocusMinutesChange: (Int) -> Unit,
     onBreakMinutesChange: (Int) -> Unit,
+    onLongBreakMinutesChange: (Int) -> Unit = {},
+    onPomodorosUntilLongBreakChange: (Int) -> Unit = {},
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     // Local drag state: committing every frame would round-trip through DataStore and fight the finger.
     var localFocusMinutes by remember(focusMinutes) { mutableFloatStateOf(focusMinutes.toFloat()) }
     var localBreakMinutes by remember(breakMinutes) { mutableFloatStateOf(breakMinutes.toFloat()) }
+    var localLongBreakMinutes by remember(longBreakMinutes) { mutableFloatStateOf(longBreakMinutes.toFloat()) }
+    var localPomodorosUntilLongBreak by remember(pomodorosUntilLongBreak) {
+        mutableFloatStateOf(pomodorosUntilLongBreak.toFloat())
+    }
 
     Column(
         modifier = modifier
@@ -64,6 +72,28 @@ fun SettingsScreen(
             valueRange = TimerDefaults.MIN_BREAK_MINUTES.toFloat()..TimerDefaults.MAX_BREAK_MINUTES.toFloat(),
             steps = TimerDefaults.MAX_BREAK_MINUTES - TimerDefaults.MIN_BREAK_MINUTES - 1,
             modifier = Modifier.testTag("breakSlider")
+        )
+
+        Spacer(Modifier.height(24.dp))
+        Text("긴 휴식 시간: ${localLongBreakMinutes.roundToInt()}분")
+        Slider(
+            value = localLongBreakMinutes,
+            onValueChange = { localLongBreakMinutes = it },
+            onValueChangeFinished = { onLongBreakMinutesChange(localLongBreakMinutes.roundToInt()) },
+            valueRange = TimerDefaults.MIN_LONG_BREAK_MINUTES.toFloat()..TimerDefaults.MAX_LONG_BREAK_MINUTES.toFloat(),
+            steps = TimerDefaults.MAX_LONG_BREAK_MINUTES - TimerDefaults.MIN_LONG_BREAK_MINUTES - 1,
+            modifier = Modifier.testTag("longBreakSlider")
+        )
+
+        Spacer(Modifier.height(24.dp))
+        Text("긴 휴식까지 뽀모도로 횟수: ${localPomodorosUntilLongBreak.roundToInt()}회")
+        Slider(
+            value = localPomodorosUntilLongBreak,
+            onValueChange = { localPomodorosUntilLongBreak = it },
+            onValueChangeFinished = { onPomodorosUntilLongBreakChange(localPomodorosUntilLongBreak.roundToInt()) },
+            valueRange = TimerDefaults.MIN_POMODOROS_UNTIL_LONG_BREAK.toFloat()..TimerDefaults.MAX_POMODOROS_UNTIL_LONG_BREAK.toFloat(),
+            steps = TimerDefaults.MAX_POMODOROS_UNTIL_LONG_BREAK - TimerDefaults.MIN_POMODOROS_UNTIL_LONG_BREAK - 1,
+            modifier = Modifier.testTag("pomodorosUntilLongBreakSlider")
         )
 
         Spacer(Modifier.height(24.dp))
