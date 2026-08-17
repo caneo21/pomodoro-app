@@ -17,6 +17,18 @@ class TimerEngine(
     private fun durationFor(phase: TimerPhase): Long =
         if (phase == TimerPhase.FOCUS) focusMillis else breakMillis
 
+    /**
+     * Flips [phase] forward until [endTimestamp] is in the future. Durations are floored at
+     * [MIN_PHASE_MILLIS] before they ever reach here, so this always terminates.
+     */
+    private fun advanceAcrossPhaseBoundaries(now: Long) {
+        while (now >= endTimestamp) {
+            phase = if (phase == TimerPhase.FOCUS) TimerPhase.BREAK else TimerPhase.FOCUS
+            endTimestamp += durationFor(phase)
+            currentPhaseDurationMillis = durationFor(phase)
+        }
+    }
+
     fun currentState(now: Long): TimerState {
         val remaining = if (isRunning) (endTimestamp - now).coerceAtLeast(0) else remainingWhenIdle
         return TimerState(
@@ -54,18 +66,14 @@ class TimerEngine(
     fun tick(now: Long): TimerState {
         if (!isRunning) return currentState(now)
 
-        while (now >= endTimestamp) {
-            phase = if (phase == TimerPhase.FOCUS) TimerPhase.BREAK else TimerPhase.FOCUS
-            endTimestamp += durationFor(phase)
-            currentPhaseDurationMillis = durationFor(phase)
-        }
+        advanceAcrossPhaseBoundaries(now)
         remainingWhenIdle = (endTimestamp - now).coerceAtLeast(0)
         return currentState(now)
     }
 
     fun updateDurations(focusMillis: Long, breakMillis: Long) {
-        this.focusMillis = focusMillis
-        this.breakMillis = breakMillis
+        this.focusMillis = focusMillis.coerceAtLeast(MIN_PHASE_MILLIS)
+        this.breakMillis = breakMillis.coerceAtLeast(MIN_PHASE_MILLIS)
         if (!isRunning) {
             remainingWhenIdle = durationFor(phase)
             currentPhaseDurationMillis = durationFor(phase)
@@ -75,23 +83,37 @@ class TimerEngine(
     /**
      * Adopts a [SyncPayload] received from the paired device as this engine's new state, correcting
      * for the time elapsed between when the payload was captured ([SyncPayload.lastActionAtMillis])
-     * and [now]. If that gap is large enough to have crossed a phase boundary, [remainingMillis] may
-     * briefly read 0 until the next [tick] call, which flips phases correctly from there.
+     * and [now]. A gap large enough to have crossed one or more phase boundaries is resolved here, so
+     * the adopted state matches what a continuously-ticking engine would show.
      */
     fun adoptRemote(payload: SyncPayload, now: Long): TimerState {
-        focusMillis = payload.focusMinutes * 60_000L
-        breakMillis = payload.breakMinutes * 60_000L
+        focusMillis = (payload.focusMinutes * 60_000L).coerceAtLeast(MIN_PHASE_MILLIS)
+        breakMillis = (payload.breakMinutes * 60_000L).coerceAtLeast(MIN_PHASE_MILLIS)
         phase = payload.phase
-        currentPhaseDurationMillis = payload.totalMillis
+        currentPhaseDurationMillis = payload.totalMillis.coerceAtLeast(MIN_PHASE_MILLIS)
         isRunning = payload.isRunning
 
-        val elapsedSincePublish = if (isRunning) (now - payload.lastActionAtMillis).coerceAtLeast(0) else 0L
-        val remainingNow = (payload.remainingMillis - elapsedSincePublish).coerceAtLeast(0)
         if (isRunning) {
-            endTimestamp = now + remainingNow
+            val elapsedSincePublish = (now - payload.lastActionAtMillis).coerceAtLeast(0)
+            // Deliberately not clamped at 0: an overshoot is what tells the loop below how far past
+            // the boundary we already are.
+            endTimestamp = now + (payload.remainingMillis - elapsedSincePublish)
+            advanceAcrossPhaseBoundaries(now)
+            remainingWhenIdle = (endTimestamp - now).coerceAtLeast(0)
         } else {
-            remainingWhenIdle = remainingNow
+            remainingWhenIdle = payload.remainingMillis
         }
         return currentState(now)
+    }
+
+    private companion object {
+        /**
+         * Floor for any externally-supplied phase duration. A 0 would make
+         * [advanceAcrossPhaseBoundaries] add 0 forever.
+         */
+        val MIN_PHASE_MILLIS = minOf(
+            TimerDefaults.MIN_FOCUS_MINUTES,
+            TimerDefaults.MIN_BREAK_MINUTES
+        ) * 60_000L
     }
 }

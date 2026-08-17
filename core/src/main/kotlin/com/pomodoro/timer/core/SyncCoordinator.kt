@@ -2,6 +2,9 @@ package com.pomodoro.timer.core
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.retry
 import kotlinx.coroutines.launch
 
 /** "가장 최근 조작이 이김": a remote payload wins if we have no local state yet, or it is newer. */
@@ -18,15 +21,23 @@ class SyncCoordinator(
     private val scope: CoroutineScope,
     private val onRemoteStateIsNewer: (SyncPayload) -> Unit
 ) {
+    private companion object {
+        const val OBSERVE_RETRY_ATTEMPTS = 5L
+        const val OBSERVE_RETRY_DELAY_MILLIS = 2_000L
+    }
+
     private var lastKnown: SyncPayload? = null
 
     fun start(): Job = scope.launch {
-        transport.observeRemoteState().collect { remote ->
-            if (isRemoteNewer(lastKnown, remote)) {
-                lastKnown = remote
-                onRemoteStateIsNewer(remote)
+        transport.observeRemoteState()
+            .retry(OBSERVE_RETRY_ATTEMPTS) { delay(OBSERVE_RETRY_DELAY_MILLIS); true }
+            .catch { }
+            .collect { remote ->
+                if (isRemoteNewer(lastKnown, remote)) {
+                    lastKnown = remote
+                    onRemoteStateIsNewer(remote)
+                }
             }
-        }
     }
 
     fun publishLocalState(payload: SyncPayload) {

@@ -172,6 +172,83 @@ class TimerEngineTest {
     }
 
     @Test
+    fun `adoptRemote crosses a phase boundary when the payload is older than its remaining time`() {
+        val engine = TimerEngine(focusMillis, breakMillis)
+        val payload = SyncPayload(
+            phase = TimerPhase.FOCUS,
+            isRunning = true,
+            remainingMillis = 5_000L,
+            totalMillis = focusMillis,
+            focusMinutes = 25,
+            breakMinutes = 5,
+            lastActionAtMillis = 1_000_000L
+        )
+
+        // 60s after publish: focus ended 55s ago, so we are 55s into the 5-minute break.
+        val state = engine.adoptRemote(payload, now = 1_060_000L)
+
+        assertEquals(TimerPhase.BREAK, state.phase)
+        assertTrue(state.isRunning)
+        assertEquals(breakMillis - 55_000L, state.remainingMillis)
+        assertEquals(breakMillis, state.totalMillis)
+    }
+
+    @Test
+    fun `adoptRemote across multiple phase boundaries matches a tick-driven engine`() {
+        val payload = SyncPayload(
+            phase = TimerPhase.FOCUS,
+            isRunning = true,
+            remainingMillis = 5_000L,
+            totalMillis = focusMillis,
+            focusMinutes = 25,
+            breakMinutes = 5,
+            lastActionAtMillis = 1_000_000L
+        )
+        // Focus ends at +5s, break ends at +305s, the next focus ends at +1_805s. Land 10s into it.
+        val now = 1_000_000L + 5_000L + breakMillis + 10_000L
+
+        val adopted = TimerEngine(focusMillis, breakMillis).adoptRemote(payload, now)
+
+        // Reference: an engine driven forward by plain ticks over the same wall-clock span. Starting
+        // at 1_005_000 - focusMillis puts its focus phase's end exactly where the payload's is.
+        val startedAt = 1_005_000L - focusMillis
+        val reference = TimerEngine(focusMillis, breakMillis)
+        reference.start(startedAt)
+        var t = startedAt
+        while (t < now) {
+            t = minOf(t + 60_000L, now)
+            reference.tick(t)
+        }
+        val expected = reference.currentState(now)
+
+        assertEquals(TimerPhase.FOCUS, adopted.phase)
+        assertEquals(expected.phase, adopted.phase)
+        assertEquals(expected.remainingMillis, adopted.remainingMillis)
+        assertEquals(expected.totalMillis, adopted.totalMillis)
+    }
+
+    @Test
+    fun `adoptRemote coerces a zero duration up to the minimum so tick cannot spin forever`() {
+        val engine = TimerEngine(focusMillis, breakMillis)
+        val payload = SyncPayload(
+            phase = TimerPhase.FOCUS,
+            isRunning = true,
+            remainingMillis = 0L,
+            totalMillis = 0L,
+            focusMinutes = 0,
+            breakMinutes = 0,
+            lastActionAtMillis = 1_000_000L
+        )
+
+        val state = engine.adoptRemote(payload, now = 1_000_000L)
+
+        // A 0-minute duration would make tick()'s boundary loop add 0 forever.
+        assertEquals(TimerDefaults.MIN_BREAK_MINUTES * 60_000L, state.totalMillis)
+        val ticked = engine.tick(now = 1_000_000L + 24 * 60 * 60_000L)
+        assertTrue(ticked.totalMillis >= TimerDefaults.MIN_BREAK_MINUTES * 60_000L)
+    }
+
+    @Test
     fun `adoptRemote of a paused payload freezes at the adjusted remaining time`() {
         val engine = TimerEngine(focusMillis, breakMillis)
         val payload = SyncPayload(

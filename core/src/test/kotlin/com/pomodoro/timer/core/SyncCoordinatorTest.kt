@@ -4,9 +4,12 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -20,6 +23,25 @@ private class FakeSyncTransport : SyncTransport {
     }
 
     override fun observeRemoteState(): Flow<SyncPayload> = remoteFlow
+
+    suspend fun emitRemote(payload: SyncPayload) {
+        remoteFlow.emit(payload)
+    }
+}
+
+/** Throws on the first [failures] subscriptions to [observeRemoteState], then behaves normally. */
+private class FlakySyncTransport(private val failures: Int) : SyncTransport {
+    var subscriptions = 0
+        private set
+    private val remoteFlow = MutableSharedFlow<SyncPayload>(extraBufferCapacity = 8)
+
+    override suspend fun publish(payload: SyncPayload) = Unit
+
+    override fun observeRemoteState(): Flow<SyncPayload> = flow {
+        val attempt = subscriptions++
+        if (attempt < failures) throw IllegalStateException("transient transport failure")
+        emitAll(remoteFlow)
+    }
 
     suspend fun emitRemote(payload: SyncPayload) {
         remoteFlow.emit(payload)
@@ -113,5 +135,38 @@ class SyncCoordinatorTest {
 
         assertEquals(0, received.size)
         job.cancel()
+    }
+
+    @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun `a failing remote flow is retried instead of killing sync permanently`() = runTest {
+        val transport = FlakySyncTransport(failures = 2)
+        val received = mutableListOf<SyncPayload>()
+        val coordinator = SyncCoordinator(transport, this) { received.add(it) }
+
+        val job = coordinator.start()
+        advanceUntilIdle()
+
+        assertEquals(3, transport.subscriptions)
+        transport.emitRemote(payload(60_000L))
+        advanceUntilIdle()
+
+        assertEquals(1, received.size)
+        assertEquals(60_000L, received[0].lastActionAtMillis)
+        job.cancel()
+    }
+
+    @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun `a remote flow that never recovers is swallowed rather than crashing the scope`() = runTest {
+        val transport = FlakySyncTransport(failures = Int.MAX_VALUE)
+        val coordinator = SyncCoordinator(transport, this) {}
+
+        coordinator.start()
+        advanceUntilIdle()
+
+        // Retries are exhausted and the failure is swallowed by .catch, rather than propagating out
+        // of the launched coroutine and crashing the parent scope.
+        assertTrue(coroutineContext[Job]!!.isActive)
     }
 }
