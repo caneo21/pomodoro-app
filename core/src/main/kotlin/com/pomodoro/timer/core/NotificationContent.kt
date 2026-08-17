@@ -4,7 +4,8 @@ object NotificationContent {
 
     fun ongoingTitle(phase: TimerPhase): String = when (phase) {
         TimerPhase.FOCUS -> "집중 중"
-        TimerPhase.BREAK -> "휴식 중"
+        TimerPhase.SHORT_BREAK -> "휴식 중"
+        TimerPhase.LONG_BREAK -> "긴 휴식 중"
     }
 
     fun ongoingText(remainingMillis: Long): String {
@@ -15,7 +16,8 @@ object NotificationContent {
     }
 
     fun sessionEndTitle(newPhase: TimerPhase): String = when (newPhase) {
-        TimerPhase.BREAK -> "휴식 시간입니다!"
+        TimerPhase.SHORT_BREAK -> "휴식 시간입니다!"
+        TimerPhase.LONG_BREAK -> "긴 휴식 시간입니다!"
         TimerPhase.FOCUS -> "다시 집중할 시간입니다!"
     }
 }

@@ -23,7 +23,7 @@ class TimerEngine(
      */
     private fun advanceAcrossPhaseBoundaries(now: Long) {
         while (now >= endTimestamp) {
-            phase = if (phase == TimerPhase.FOCUS) TimerPhase.BREAK else TimerPhase.FOCUS
+            phase = if (phase == TimerPhase.FOCUS) TimerPhase.SHORT_BREAK else TimerPhase.FOCUS
             endTimestamp += durationFor(phase)
             currentPhaseDurationMillis = durationFor(phase)
         }

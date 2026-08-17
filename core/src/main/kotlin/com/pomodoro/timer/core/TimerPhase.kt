@@ -2,5 +2,6 @@ package com.pomodoro.timer.core
 
 enum class TimerPhase {
     FOCUS,
-    BREAK
+    SHORT_BREAK,
+    LONG_BREAK
 }

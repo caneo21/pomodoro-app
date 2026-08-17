@@ -73,7 +73,7 @@ class TimerEngineTest {
         // tick 5 seconds after focus should have ended
         val state = engine.tick(now = focusMillis + 5_000L)
 
-        assertEquals(TimerPhase.BREAK, state.phase)
+        assertEquals(TimerPhase.SHORT_BREAK, state.phase)
         assertTrue(state.isRunning)
         assertEquals(breakMillis - 5_000L, state.remainingMillis)
         assertEquals(breakMillis, state.totalMillis)
@@ -126,7 +126,7 @@ class TimerEngineTest {
         assertTrue(midSession.remainingMillis <= midSession.totalMillis)
 
         val afterFlip = engine.tick(now = focusMillis)
-        assertEquals(TimerPhase.BREAK, afterFlip.phase)
+        assertEquals(TimerPhase.SHORT_BREAK, afterFlip.phase)
         assertEquals(2 * 60_000L, afterFlip.totalMillis)
     }
 
@@ -134,7 +134,7 @@ class TimerEngineTest {
     fun `adoptRemote applied immediately reproduces the remote running state`() {
         val engine = TimerEngine(focusMillis, breakMillis)
         val payload = SyncPayload(
-            phase = TimerPhase.BREAK,
+            phase = TimerPhase.SHORT_BREAK,
             isRunning = true,
             remainingMillis = 90_000L,
             totalMillis = breakMillis,
@@ -145,7 +145,7 @@ class TimerEngineTest {
 
         val state = engine.adoptRemote(payload, now = 1_000_000L)
 
-        assertEquals(TimerPhase.BREAK, state.phase)
+        assertEquals(TimerPhase.SHORT_BREAK, state.phase)
         assertTrue(state.isRunning)
         assertEquals(90_000L, state.remainingMillis)
         assertEquals(breakMillis, state.totalMillis)
@@ -187,7 +187,7 @@ class TimerEngineTest {
         // 60s after publish: focus ended 55s ago, so we are 55s into the 5-minute break.
         val state = engine.adoptRemote(payload, now = 1_060_000L)
 
-        assertEquals(TimerPhase.BREAK, state.phase)
+        assertEquals(TimerPhase.SHORT_BREAK, state.phase)
         assertTrue(state.isRunning)
         assertEquals(breakMillis - 55_000L, state.remainingMillis)
         assertEquals(breakMillis, state.totalMillis)

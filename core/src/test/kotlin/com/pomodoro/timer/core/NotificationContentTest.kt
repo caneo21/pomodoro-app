@@ -8,7 +8,8 @@ class NotificationContentTest {
     @Test
     fun `ongoing title reflects phase`() {
         assertEquals("집중 중", NotificationContent.ongoingTitle(TimerPhase.FOCUS))
-        assertEquals("휴식 중", NotificationContent.ongoingTitle(TimerPhase.BREAK))
+        assertEquals("휴식 중", NotificationContent.ongoingTitle(TimerPhase.SHORT_BREAK))
+        assertEquals("긴 휴식 중", NotificationContent.ongoingTitle(TimerPhase.LONG_BREAK))
     }
 
     @Test
@@ -20,7 +21,8 @@ class NotificationContentTest {
 
     @Test
     fun `session end title reflects the phase just entered`() {
-        assertEquals("휴식 시간입니다!", NotificationContent.sessionEndTitle(TimerPhase.BREAK))
+        assertEquals("휴식 시간입니다!", NotificationContent.sessionEndTitle(TimerPhase.SHORT_BREAK))
+        assertEquals("긴 휴식 시간입니다!", NotificationContent.sessionEndTitle(TimerPhase.LONG_BREAK))
         assertEquals("다시 집중할 시간입니다!", NotificationContent.sessionEndTitle(TimerPhase.FOCUS))
     }
 }
