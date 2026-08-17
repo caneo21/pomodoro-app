@@ -27,4 +27,28 @@ class TimerUiStateTest {
         assertEquals(30, uiState.focusMinutes)
         assertEquals(10, uiState.breakMinutes)
     }
+
+    @Test
+    fun `buildUiState carries over the long-break cycle fields`() {
+        val timer = TimerState(
+            phase = TimerPhase.LONG_BREAK,
+            isRunning = true,
+            remainingMillis = 600_000L,
+            totalMillis = 900_000L,
+            completedPomodoros = 4
+        )
+        val settings = TimerSettings(
+            focusMinutes = 30,
+            breakMinutes = 10,
+            longBreakMinutes = 20,
+            pomodorosUntilLongBreak = 4
+        )
+
+        val uiState = buildUiState(timer, settings)
+
+        assertEquals(TimerPhase.LONG_BREAK, uiState.phase)
+        assertEquals(20, uiState.longBreakMinutes)
+        assertEquals(4, uiState.completedPomodoros)
+        assertEquals(4, uiState.pomodorosUntilLongBreak)
+    }
 }

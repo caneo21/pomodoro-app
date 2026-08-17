@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.pomodoro.timer.core.TimerState
+import com.pomodoro.timer.settings.TimerSettings
 import com.pomodoro.timer.settings.TimerSettingsRepository
 import com.pomodoro.timer.settings.dataStore
 import com.pomodoro.timer.timer.TimerService
@@ -20,7 +21,7 @@ class TimerViewModel(
     timerState: StateFlow<TimerState>,
     private val settingsRepository: TimerSettingsRepository,
     private val onCommand: (String) -> Unit,
-    private val onUpdateDurations: (Int, Int) -> Unit
+    private val onUpdateDurations: (TimerSettings) -> Unit
 ) : ViewModel() {
 
     val uiState: StateFlow<TimerUiState> =
@@ -32,7 +33,7 @@ class TimerViewModel(
         // engine on cold start, not only when the user edits Settings.
         viewModelScope.launch {
             settingsRepository.settings.collect { settings ->
-                onUpdateDurations(settings.focusMinutes, settings.breakMinutes)
+                onUpdateDurations(settings)
             }
         }
     }
@@ -49,6 +50,14 @@ class TimerViewModel(
         viewModelScope.launch { settingsRepository.updateBreakMinutes(minutes) }
     }
 
+    fun updateLongBreakMinutes(minutes: Int) {
+        viewModelScope.launch { settingsRepository.updateLongBreakMinutes(minutes) }
+    }
+
+    fun updatePomodorosUntilLongBreak(count: Int) {
+        viewModelScope.launch { settingsRepository.updatePomodorosUntilLongBreak(count) }
+    }
+
     class Factory(private val appContext: Context) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -57,11 +66,13 @@ class TimerViewModel(
                 val intent = Intent(appContext, TimerService::class.java).setAction(action)
                 ContextCompat.startForegroundService(appContext, intent)
             }
-            val onUpdateDurations: (Int, Int) -> Unit = { focusMinutes, breakMinutes ->
+            val onUpdateDurations: (TimerSettings) -> Unit = { settings ->
                 val intent = Intent(appContext, TimerService::class.java)
                     .setAction(TimerService.ACTION_UPDATE_DURATIONS)
-                    .putExtra(TimerService.EXTRA_FOCUS_MINUTES, focusMinutes)
-                    .putExtra(TimerService.EXTRA_BREAK_MINUTES, breakMinutes)
+                    .putExtra(TimerService.EXTRA_FOCUS_MINUTES, settings.focusMinutes)
+                    .putExtra(TimerService.EXTRA_BREAK_MINUTES, settings.breakMinutes)
+                    .putExtra(TimerService.EXTRA_LONG_BREAK_MINUTES, settings.longBreakMinutes)
+                    .putExtra(TimerService.EXTRA_POMODOROS_UNTIL_LONG_BREAK, settings.pomodorosUntilLongBreak)
                 ContextCompat.startForegroundService(appContext, intent)
             }
             return TimerViewModel(TimerService.state, repository, onCommand, onUpdateDurations) as T

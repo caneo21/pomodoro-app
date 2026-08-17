@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.viewModelScope
 import com.pomodoro.timer.core.TimerPhase
 import com.pomodoro.timer.core.TimerState
+import com.pomodoro.timer.settings.TimerSettings
 import com.pomodoro.timer.settings.TimerSettingsRepository
 import com.pomodoro.timer.timer.TimerService
 import kotlinx.coroutines.Dispatchers
@@ -60,7 +61,7 @@ class TimerViewModelTest {
         timerState: StateFlow<TimerState>,
         repository: TimerSettingsRepository = newRepository(),
         onCommand: (String) -> Unit = {},
-        onUpdateDurations: (Int, Int) -> Unit = { _, _ -> }
+        onUpdateDurations: (TimerSettings) -> Unit = {}
     ): TimerViewModel =
         TimerViewModel(timerState, repository, onCommand, onUpdateDurations)
             .also { createdViewModels.add(it) }
@@ -118,18 +119,37 @@ class TimerViewModelTest {
         val timerState = MutableStateFlow(
             TimerState(TimerPhase.FOCUS, isRunning = false, remainingMillis = 1_500_000L, totalMillis = 1_500_000L)
         )
-        val pushedDurations = MutableStateFlow<Pair<Int, Int>?>(null)
+        val pushedSettings = MutableStateFlow<TimerSettings?>(null)
         val viewModel = newViewModel(
             timerState,
-            onUpdateDurations = { focus, brk -> pushedDurations.value = focus to brk }
+            onUpdateDurations = { pushedSettings.value = it }
         )
 
         // Cold start: the persisted (here, default) settings reach the service without user action.
-        assertEquals(25 to 5, pushedDurations.first { it != null })
+        val initial = pushedSettings.first { it != null }
+        assertEquals(TimerSettings(focusMinutes = 25, breakMinutes = 5), initial)
 
         viewModel.updateFocusMinutes(40)
         viewModel.updateBreakMinutes(10)
 
-        assertEquals(40 to 10, pushedDurations.first { it == 40 to 10 })
+        val updated = pushedSettings.first { it?.focusMinutes == 40 && it.breakMinutes == 10 }
+        assertEquals(40, updated?.focusMinutes)
+        assertEquals(10, updated?.breakMinutes)
+    }
+
+    @Test
+    fun `updateLongBreakMinutes and updatePomodorosUntilLongBreak persist through the repository`() = runTest(dispatcher) {
+        val timerState = MutableStateFlow(
+            TimerState(TimerPhase.FOCUS, isRunning = false, remainingMillis = 1_500_000L, totalMillis = 1_500_000L)
+        )
+        val viewModel = newViewModel(timerState)
+
+        viewModel.updateLongBreakMinutes(20)
+        viewModel.updatePomodorosUntilLongBreak(3)
+
+        val uiState = viewModel.uiState.first { it.longBreakMinutes == 20 && it.pomodorosUntilLongBreak == 3 }
+
+        assertEquals(20, uiState.longBreakMinutes)
+        assertEquals(3, uiState.pomodorosUntilLongBreak)
     }
 }
