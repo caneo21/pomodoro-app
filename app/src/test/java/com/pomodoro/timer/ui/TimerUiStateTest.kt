@@ -11,7 +11,7 @@ class TimerUiStateTest {
     @Test
     fun `buildUiState combines timer state and settings`() {
         val timer = TimerState(
-            phase = TimerPhase.BREAK,
+            phase = TimerPhase.SHORT_BREAK,
             isRunning = true,
             remainingMillis = 120_000L,
             totalMillis = 300_000L
@@ -20,7 +20,7 @@ class TimerUiStateTest {
 
         val uiState = buildUiState(timer, settings)
 
-        assertEquals(TimerPhase.BREAK, uiState.phase)
+        assertEquals(TimerPhase.SHORT_BREAK, uiState.phase)
         assertEquals(true, uiState.isRunning)
         assertEquals(120_000L, uiState.remainingMillis)
         assertEquals(300_000L, uiState.totalMillis)
