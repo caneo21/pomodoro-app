@@ -40,6 +40,8 @@ class TimerService : Service() {
         const val ACTION_UPDATE_DURATIONS = "com.pomodoro.timer.action.UPDATE_DURATIONS"
         const val EXTRA_FOCUS_MINUTES = "extra_focus_minutes"
         const val EXTRA_BREAK_MINUTES = "extra_break_minutes"
+        const val EXTRA_LONG_BREAK_MINUTES = "extra_long_break_minutes"
+        const val EXTRA_POMODOROS_UNTIL_LONG_BREAK = "extra_pomodoros_until_long_break"
 
         private const val CHANNEL_ID = "pomodoro_timer_channel"
         private const val SESSION_END_CHANNEL_ID = "pomodoro_session_end_channel"
@@ -49,8 +51,14 @@ class TimerService : Service() {
 
         private val defaultFocusMillis = TimerDefaults.DEFAULT_FOCUS_MINUTES * 60_000L
         private val defaultBreakMillis = TimerDefaults.DEFAULT_BREAK_MINUTES * 60_000L
+        private val defaultLongBreakMillis = TimerDefaults.DEFAULT_LONG_BREAK_MINUTES * 60_000L
 
-        private val engine = TimerEngine(defaultFocusMillis, defaultBreakMillis)
+        private val engine = TimerEngine(
+            defaultFocusMillis,
+            defaultBreakMillis,
+            defaultLongBreakMillis,
+            TimerDefaults.DEFAULT_POMODOROS_UNTIL_LONG_BREAK
+        )
 
         private val _state = MutableStateFlow(engine.currentState(System.currentTimeMillis()))
         val state: StateFlow<TimerState> = _state.asStateFlow()
@@ -59,6 +67,8 @@ class TimerService : Service() {
         // defaults while the engine still holds the user's real durations.
         private var focusMinutes: Int = TimerDefaults.DEFAULT_FOCUS_MINUTES
         private var breakMinutes: Int = TimerDefaults.DEFAULT_BREAK_MINUTES
+        private var longBreakMinutes: Int = TimerDefaults.DEFAULT_LONG_BREAK_MINUTES
+        private var pomodorosUntilLongBreak: Int = TimerDefaults.DEFAULT_POMODOROS_UNTIL_LONG_BREAK
     }
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -86,6 +96,8 @@ class TimerService : Service() {
     private fun applyRemoteState(payload: SyncPayload) {
         focusMinutes = payload.focusMinutes
         breakMinutes = payload.breakMinutes
+        longBreakMinutes = payload.longBreakMinutes
+        pomodorosUntilLongBreak = payload.pomodorosUntilLongBreak
         _state.value = engine.adoptRemote(payload, System.currentTimeMillis())
         if (_state.value.isRunning) startTicker() else stopTicker()
         updateOngoingNotification(_state.value)
@@ -100,7 +112,10 @@ class TimerService : Service() {
                 totalMillis = state.totalMillis,
                 focusMinutes = focusMinutes,
                 breakMinutes = breakMinutes,
-                lastActionAtMillis = actionAtMillis
+                lastActionAtMillis = actionAtMillis,
+                longBreakMinutes = longBreakMinutes,
+                pomodorosUntilLongBreak = pomodorosUntilLongBreak,
+                completedPomodoros = state.completedPomodoros
             )
         )
     }
@@ -134,7 +149,17 @@ class TimerService : Service() {
             ACTION_UPDATE_DURATIONS -> {
                 focusMinutes = intent.getIntExtra(EXTRA_FOCUS_MINUTES, TimerDefaults.DEFAULT_FOCUS_MINUTES)
                 breakMinutes = intent.getIntExtra(EXTRA_BREAK_MINUTES, TimerDefaults.DEFAULT_BREAK_MINUTES)
-                engine.updateDurations(focusMinutes * 60_000L, breakMinutes * 60_000L)
+                longBreakMinutes = intent.getIntExtra(EXTRA_LONG_BREAK_MINUTES, TimerDefaults.DEFAULT_LONG_BREAK_MINUTES)
+                pomodorosUntilLongBreak = intent.getIntExtra(
+                    EXTRA_POMODOROS_UNTIL_LONG_BREAK,
+                    TimerDefaults.DEFAULT_POMODOROS_UNTIL_LONG_BREAK
+                )
+                engine.updateDurations(
+                    focusMinutes * 60_000L,
+                    breakMinutes * 60_000L,
+                    longBreakMinutes * 60_000L,
+                    pomodorosUntilLongBreak
+                )
                 _state.value = engine.currentState(now)
                 publishSyncState(_state.value, now)
                 if (!_state.value.isRunning) {
