@@ -50,8 +50,13 @@ fun WearTimerScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = if (uiState.phase == TimerPhase.FOCUS) "집중" else "휴식",
+            text = phaseLabel(uiState.phase),
             style = MaterialTheme.typography.title3
+        )
+        Text(
+            text = "${uiState.completedPomodoros}/${uiState.pomodorosUntilLongBreak}",
+            style = MaterialTheme.typography.caption2,
+            modifier = Modifier.testTag("cycleProgressText")
         )
         Spacer(Modifier.height(8.dp))
 
@@ -84,6 +89,12 @@ fun WearTimerScreen(
             }
         }
     }
+}
+
+private fun phaseLabel(phase: TimerPhase): String = when (phase) {
+    TimerPhase.FOCUS -> "집중"
+    TimerPhase.SHORT_BREAK -> "휴식"
+    TimerPhase.LONG_BREAK -> "긴 휴식"
 }
 
 fun formatWearMillis(millis: Long): String {

@@ -87,4 +87,22 @@ class WearTimerScreenTest {
 
         composeRule.onNodeWithText("12:34").assertExists()
     }
+
+    @Test
+    fun cycleProgress_showsCompletedOverThreshold() {
+        composeRule.setContent {
+            PomodoroWearTheme {
+                WearTimerScreen(
+                    uiState = WearTimerUiState(completedPomodoros = 2, pomodorosUntilLongBreak = 4),
+                    isAmbient = false,
+                    onStart = {},
+                    onPause = {},
+                    onReset = {}
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("cycleProgressText").assertExists()
+        composeRule.onNodeWithText("2/4").assertExists()
+    }
 }
