@@ -58,4 +58,42 @@ class TimerSettingsRepositoryTest {
         repository.updateBreakMinutes(0)
         assertEquals(1, repository.settings.first().breakMinutes)
     }
+
+    @Test
+    fun `settings default to 15 minute long break and 4 pomodoros until long break`() = runTest {
+        val repository = TimerSettingsRepository(newDataStore())
+
+        val settings = repository.settings.first()
+
+        assertEquals(15, settings.longBreakMinutes)
+        assertEquals(4, settings.pomodorosUntilLongBreak)
+    }
+
+    @Test
+    fun `updateLongBreakMinutes persists and clamps to 5 to 45 range`() = runTest {
+        val repository = TimerSettingsRepository(newDataStore())
+
+        repository.updateLongBreakMinutes(20)
+        assertEquals(20, repository.settings.first().longBreakMinutes)
+
+        repository.updateLongBreakMinutes(99)
+        assertEquals(45, repository.settings.first().longBreakMinutes)
+
+        repository.updateLongBreakMinutes(0)
+        assertEquals(5, repository.settings.first().longBreakMinutes)
+    }
+
+    @Test
+    fun `updatePomodorosUntilLongBreak persists and clamps to 2 to 8 range`() = runTest {
+        val repository = TimerSettingsRepository(newDataStore())
+
+        repository.updatePomodorosUntilLongBreak(3)
+        assertEquals(3, repository.settings.first().pomodorosUntilLongBreak)
+
+        repository.updatePomodorosUntilLongBreak(99)
+        assertEquals(8, repository.settings.first().pomodorosUntilLongBreak)
+
+        repository.updatePomodorosUntilLongBreak(0)
+        assertEquals(2, repository.settings.first().pomodorosUntilLongBreak)
+    }
 }
