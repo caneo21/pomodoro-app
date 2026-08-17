@@ -11,6 +11,7 @@ import com.google.android.gms.wearable.Wearable
 import com.pomodoro.timer.core.SyncKeys
 import com.pomodoro.timer.core.SyncPayload
 import com.pomodoro.timer.core.SyncTransport
+import com.pomodoro.timer.core.TimerDefaults
 import com.pomodoro.timer.core.TimerPhase
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -85,8 +86,11 @@ class PlayServicesSyncTransport(context: Context) : SyncTransport {
         focusMinutes = map.getInt(SyncKeys.KEY_FOCUS_MINUTES),
         breakMinutes = map.getInt(SyncKeys.KEY_BREAK_MINUTES),
         lastActionAtMillis = map.getLong(SyncKeys.KEY_LAST_ACTION_AT_MILLIS),
-        longBreakMinutes = map.getInt(SyncKeys.KEY_LONG_BREAK_MINUTES),
-        pomodorosUntilLongBreak = map.getInt(SyncKeys.KEY_POMODOROS_UNTIL_LONG_BREAK),
+        longBreakMinutes = map.getInt(SyncKeys.KEY_LONG_BREAK_MINUTES, TimerDefaults.DEFAULT_LONG_BREAK_MINUTES),
+        pomodorosUntilLongBreak = map.getInt(
+            SyncKeys.KEY_POMODOROS_UNTIL_LONG_BREAK,
+            TimerDefaults.DEFAULT_POMODOROS_UNTIL_LONG_BREAK
+        ),
         completedPomodoros = map.getInt(SyncKeys.KEY_COMPLETED_POMODOROS)
     )
 }

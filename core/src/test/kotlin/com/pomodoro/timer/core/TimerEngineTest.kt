@@ -84,7 +84,7 @@ class TimerEngineTest {
     fun `tick past end of break phase transitions back to focus`() {
         val engine = TimerEngine(focusMillis, breakMillis)
         engine.start(now = 0L)
-        engine.tick(now = focusMillis) // flips to BREAK
+        engine.tick(now = focusMillis) // flips to SHORT_BREAK
 
         val state = engine.tick(now = focusMillis + breakMillis + 2_000L)
 
@@ -286,6 +286,30 @@ class TimerEngineTest {
         val afterLongBreak = engine.tick(now = focusMillis + breakMillis + focusMillis + 900_000L)
         assertEquals(TimerPhase.FOCUS, afterLongBreak.phase)
         assertEquals(0, afterLongBreak.completedPomodoros)
+    }
+
+    @Test
+    fun `the default threshold of 4 enters LONG_BREAK on the 4th focus completion, not the 3rd`() {
+        val engine = TimerEngine(focusMillis, breakMillis) // relies on the default pomodorosUntilLongBreak = 4
+        engine.start(now = 0L)
+
+        var now = 0L
+        repeat(3) { cycle ->
+            now += focusMillis
+            val afterFocus = engine.tick(now = now)
+            assertEquals(TimerPhase.SHORT_BREAK, afterFocus.phase)
+            assertEquals(cycle + 1, afterFocus.completedPomodoros)
+
+            now += breakMillis
+            val afterBreak = engine.tick(now = now)
+            assertEquals(TimerPhase.FOCUS, afterBreak.phase)
+        }
+
+        now += focusMillis
+        val afterFourthFocus = engine.tick(now = now)
+        assertEquals(TimerPhase.LONG_BREAK, afterFourthFocus.phase)
+        assertEquals(4, afterFourthFocus.completedPomodoros)
+        assertEquals(TimerDefaults.DEFAULT_LONG_BREAK_MINUTES * 60_000L, afterFourthFocus.totalMillis)
     }
 
     @Test
