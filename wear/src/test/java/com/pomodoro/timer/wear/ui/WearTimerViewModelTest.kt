@@ -40,23 +40,36 @@ class WearTimerViewModelTest {
 
     private fun newViewModel(
         timerState: StateFlow<TimerState>,
+        pomodorosUntilLongBreak: StateFlow<Int> = MutableStateFlow(4),
         onCommand: (String) -> Unit = {}
     ): WearTimerViewModel =
-        WearTimerViewModel(timerState, onCommand).also { createdViewModels.add(it) }
+        WearTimerViewModel(timerState, pomodorosUntilLongBreak, onCommand).also { createdViewModels.add(it) }
 
     @Test
     fun `uiState reflects the injected timer state`() = runTest(dispatcher) {
         val timerState = MutableStateFlow(
-            TimerState(TimerPhase.BREAK, isRunning = true, remainingMillis = 120_000L, totalMillis = 300_000L)
+            TimerState(TimerPhase.SHORT_BREAK, isRunning = true, remainingMillis = 120_000L, totalMillis = 300_000L)
         )
         val viewModel = newViewModel(timerState)
 
-        val uiState = viewModel.uiState.first { it.phase == TimerPhase.BREAK }
+        val uiState = viewModel.uiState.first { it.phase == TimerPhase.SHORT_BREAK }
 
-        assertEquals(TimerPhase.BREAK, uiState.phase)
+        assertEquals(TimerPhase.SHORT_BREAK, uiState.phase)
         assertEquals(true, uiState.isRunning)
         assertEquals(120_000L, uiState.remainingMillis)
         assertEquals(300_000L, uiState.totalMillis)
+    }
+
+    @Test
+    fun `uiState reflects the injected pomodoros-until-long-break count`() = runTest(dispatcher) {
+        val timerState = MutableStateFlow(
+            TimerState(TimerPhase.FOCUS, isRunning = false, remainingMillis = 1_500_000L, totalMillis = 1_500_000L)
+        )
+        val viewModel = newViewModel(timerState, pomodorosUntilLongBreak = MutableStateFlow(3))
+
+        val uiState = viewModel.uiState.first { it.pomodorosUntilLongBreak == 3 }
+
+        assertEquals(3, uiState.pomodorosUntilLongBreak)
     }
 
     @Test
