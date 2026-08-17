@@ -35,6 +35,9 @@ class PlayServicesSyncTransport(context: Context) : SyncTransport {
             dataMap.putInt(SyncKeys.KEY_FOCUS_MINUTES, payload.focusMinutes)
             dataMap.putInt(SyncKeys.KEY_BREAK_MINUTES, payload.breakMinutes)
             dataMap.putLong(SyncKeys.KEY_LAST_ACTION_AT_MILLIS, payload.lastActionAtMillis)
+            dataMap.putInt(SyncKeys.KEY_LONG_BREAK_MINUTES, payload.longBreakMinutes)
+            dataMap.putInt(SyncKeys.KEY_POMODOROS_UNTIL_LONG_BREAK, payload.pomodorosUntilLongBreak)
+            dataMap.putInt(SyncKeys.KEY_COMPLETED_POMODOROS, payload.completedPomodoros)
         }.asPutDataRequest().setUrgent()
         dataClient.putDataItem(request).await()
     }
@@ -81,6 +84,9 @@ class PlayServicesSyncTransport(context: Context) : SyncTransport {
         totalMillis = map.getLong(SyncKeys.KEY_TOTAL_MILLIS),
         focusMinutes = map.getInt(SyncKeys.KEY_FOCUS_MINUTES),
         breakMinutes = map.getInt(SyncKeys.KEY_BREAK_MINUTES),
-        lastActionAtMillis = map.getLong(SyncKeys.KEY_LAST_ACTION_AT_MILLIS)
+        lastActionAtMillis = map.getLong(SyncKeys.KEY_LAST_ACTION_AT_MILLIS),
+        longBreakMinutes = map.getInt(SyncKeys.KEY_LONG_BREAK_MINUTES),
+        pomodorosUntilLongBreak = map.getInt(SyncKeys.KEY_POMODOROS_UNTIL_LONG_BREAK),
+        completedPomodoros = map.getInt(SyncKeys.KEY_COMPLETED_POMODOROS)
     )
 }

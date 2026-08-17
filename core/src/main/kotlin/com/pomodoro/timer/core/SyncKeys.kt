@@ -10,4 +10,7 @@ object SyncKeys {
     const val KEY_FOCUS_MINUTES = "focusMinutes"
     const val KEY_BREAK_MINUTES = "breakMinutes"
     const val KEY_LAST_ACTION_AT_MILLIS = "lastActionAtMillis"
+    const val KEY_LONG_BREAK_MINUTES = "longBreakMinutes"
+    const val KEY_POMODOROS_UNTIL_LONG_BREAK = "pomodorosUntilLongBreak"
+    const val KEY_COMPLETED_POMODOROS = "completedPomodoros"
 }
