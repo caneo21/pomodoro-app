@@ -77,6 +77,7 @@ class TimerEngineTest {
         assertTrue(state.isRunning)
         assertEquals(breakMillis - 5_000L, state.remainingMillis)
         assertEquals(breakMillis, state.totalMillis)
+        assertEquals(1, state.completedPomodoros)
     }
 
     @Test
@@ -104,7 +105,7 @@ class TimerEngineTest {
     @Test
     fun `updateDurations changes the duration used by the current idle phase`() {
         val engine = TimerEngine(focusMillis, breakMillis)
-        engine.updateDurations(focusMillis = 10 * 60_000L, breakMillis = 2 * 60_000L)
+        engine.updateDurations(focusMillis = 10 * 60_000L, shortBreakMillis = 2 * 60_000L)
 
         val state = engine.currentState(now = 0L)
 
@@ -118,7 +119,7 @@ class TimerEngineTest {
         engine.start(now = 0L)
         engine.tick(now = 60_000L)
 
-        engine.updateDurations(focusMillis = 10 * 60_000L, breakMillis = 2 * 60_000L)
+        engine.updateDurations(focusMillis = 10 * 60_000L, shortBreakMillis = 2 * 60_000L)
 
         val midSession = engine.currentState(now = 60_000L)
         assertEquals(focusMillis, midSession.totalMillis)
@@ -267,5 +268,134 @@ class TimerEngineTest {
         assertEquals(90_000L, state.remainingMillis)
         val later = engine.currentState(now = 2_000_000L)
         assertEquals(90_000L, later.remainingMillis)
+    }
+
+    @Test
+    fun `completing the Nth focus session enters LONG_BREAK and resets the count when it ends`() {
+        val engine = TimerEngine(focusMillis, breakMillis, longBreakMillis = 900_000L, pomodorosUntilLongBreak = 2)
+        engine.start(now = 0L)
+
+        engine.tick(now = focusMillis) // 1st FOCUS done -> SHORT_BREAK, completedPomodoros = 1
+        engine.tick(now = focusMillis + breakMillis) // SHORT_BREAK done -> FOCUS, completedPomodoros stays 1
+
+        val afterSecondFocus = engine.tick(now = focusMillis + breakMillis + focusMillis)
+        assertEquals(TimerPhase.LONG_BREAK, afterSecondFocus.phase)
+        assertEquals(2, afterSecondFocus.completedPomodoros)
+        assertEquals(900_000L, afterSecondFocus.totalMillis)
+
+        val afterLongBreak = engine.tick(now = focusMillis + breakMillis + focusMillis + 900_000L)
+        assertEquals(TimerPhase.FOCUS, afterLongBreak.phase)
+        assertEquals(0, afterLongBreak.completedPomodoros)
+    }
+
+    @Test
+    fun `reset preserves the completed-pomodoros count`() {
+        val engine = TimerEngine(focusMillis, breakMillis, longBreakMillis = 900_000L, pomodorosUntilLongBreak = 4)
+        engine.start(now = 0L)
+        engine.tick(now = focusMillis) // completedPomodoros = 1, now in SHORT_BREAK
+
+        val state = engine.reset(now = focusMillis)
+
+        assertEquals(TimerPhase.FOCUS, state.phase)
+        assertFalse(state.isRunning)
+        assertEquals(1, state.completedPomodoros)
+    }
+
+    @Test
+    fun `updateDurations floors pomodorosUntilLongBreak at 1`() {
+        val engine = TimerEngine(focusMillis, breakMillis, longBreakMillis = 900_000L, pomodorosUntilLongBreak = 4)
+        engine.updateDurations(focusMillis, breakMillis, 900_000L, pomodorosUntilLongBreak = 0)
+        engine.start(now = 0L)
+
+        val state = engine.tick(now = focusMillis)
+
+        assertEquals(TimerPhase.LONG_BREAK, state.phase)
+        assertEquals(1, state.completedPomodoros)
+    }
+
+    @Test
+    fun `adoptRemote applied immediately carries over completedPomodoros from the payload`() {
+        val engine = TimerEngine(focusMillis, breakMillis)
+        val payload = SyncPayload(
+            phase = TimerPhase.SHORT_BREAK,
+            isRunning = true,
+            remainingMillis = 90_000L,
+            totalMillis = breakMillis,
+            focusMinutes = 25,
+            breakMinutes = 5,
+            lastActionAtMillis = 1_000_000L,
+            completedPomodoros = 3
+        )
+
+        val state = engine.adoptRemote(payload, now = 1_000_000L)
+
+        assertEquals(3, state.completedPomodoros)
+    }
+
+    @Test
+    fun `adoptRemote crossing into and out of a long break matches a tick-driven engine`() {
+        val threshold = 1
+        val longBreakMillis = 900_000L
+        val payload = SyncPayload(
+            phase = TimerPhase.FOCUS,
+            isRunning = true,
+            remainingMillis = 5_000L,
+            totalMillis = focusMillis,
+            focusMinutes = 25,
+            breakMinutes = 5,
+            lastActionAtMillis = 1_000_000L,
+            longBreakMinutes = 15,
+            pomodorosUntilLongBreak = threshold,
+            completedPomodoros = 0
+        )
+        // Focus ends at +5s (completedPomodoros -> 1, meets threshold -> LONG_BREAK), long break runs
+        // 15 minutes, then FOCUS resumes (completedPomodoros resets to 0). Land 10s into that FOCUS.
+        val now = 1_000_000L + 5_000L + longBreakMillis + 10_000L
+
+        val adopted = TimerEngine(focusMillis, breakMillis, longBreakMillis, threshold).adoptRemote(payload, now)
+
+        // Reference: an engine driven forward by plain ticks over the same wall-clock span. Starting
+        // at 1_005_000 - focusMillis puts its focus phase's end exactly where the payload's is.
+        val startedAt = 1_005_000L - focusMillis
+        val reference = TimerEngine(focusMillis, breakMillis, longBreakMillis, threshold)
+        reference.start(startedAt)
+        var t = startedAt
+        while (t < now) {
+            t = minOf(t + 60_000L, now)
+            reference.tick(t)
+        }
+        val expected = reference.currentState(now)
+
+        assertEquals(TimerPhase.FOCUS, adopted.phase)
+        assertEquals(expected.phase, adopted.phase)
+        assertEquals(expected.remainingMillis, adopted.remainingMillis)
+        assertEquals(expected.totalMillis, adopted.totalMillis)
+        assertEquals(0, adopted.completedPomodoros)
+        assertEquals(expected.completedPomodoros, adopted.completedPomodoros)
+    }
+
+    @Test
+    fun `adoptRemote coerces a zero long-break duration up to the shared minimum`() {
+        val engine = TimerEngine(focusMillis, breakMillis)
+        val payload = SyncPayload(
+            phase = TimerPhase.FOCUS,
+            isRunning = true,
+            remainingMillis = 0L,
+            totalMillis = 0L,
+            focusMinutes = 0,
+            breakMinutes = 0,
+            lastActionAtMillis = 1_000_000L,
+            longBreakMinutes = 0,
+            pomodorosUntilLongBreak = 1,
+            completedPomodoros = 0
+        )
+
+        val state = engine.adoptRemote(payload, now = 1_000_000L)
+
+        // All three durations share one floor (see TimerEngine.MIN_PHASE_MILLIS) so the boundary loop
+        // can never add 0 forever, regardless of which duration was zeroed out.
+        assertEquals(TimerPhase.LONG_BREAK, state.phase)
+        assertEquals(TimerDefaults.MIN_BREAK_MINUTES * 60_000L, state.totalMillis)
+        assertEquals(1, state.completedPomodoros)
     }
 }
