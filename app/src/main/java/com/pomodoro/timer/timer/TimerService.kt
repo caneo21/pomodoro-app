@@ -87,10 +87,6 @@ class TimerService : Service() {
             onRemoteStateIsNewer = ::applyRemoteState
         )
         syncCoordinator.start()
-        // addListener only delivers future changes, so pull whatever is already published once.
-        serviceScope.launch {
-            transport.fetchCurrentState()?.let(::applyRemoteState)
-        }
     }
 
     private fun applyRemoteState(payload: SyncPayload) {
@@ -125,6 +121,18 @@ class TimerService : Service() {
         // foreground within ~5s regardless of which action it was.
         startForeground(ONGOING_NOTIFICATION_ID, buildOngoingNotification(_state.value))
 
+        // On a freshly-created service, the engine still holds only its hardcoded defaults until
+        // the coordinator's cold-start seed resolves; acting on this action before that happens
+        // would publish those defaults with a fresh timestamp and win a conflict it shouldn't. On
+        // a warm service this has already resolved and returns immediately.
+        serviceScope.launch {
+            syncCoordinator.awaitInitialSync()
+            handleAction(intent)
+        }
+        return START_NOT_STICKY
+    }
+
+    private fun handleAction(intent: Intent?) {
         val now = System.currentTimeMillis()
         when (intent?.action) {
             ACTION_START -> {
@@ -170,7 +178,6 @@ class TimerService : Service() {
                 }
             }
         }
-        return START_NOT_STICKY
     }
 
     private fun startTicker() {

@@ -2,6 +2,7 @@ package com.pomodoro.timer.core
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.emitAll
@@ -14,7 +15,7 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 
-private class FakeSyncTransport : SyncTransport {
+private class FakeSyncTransport(private val storedRemoteState: SyncPayload? = null) : SyncTransport {
     val published = mutableListOf<SyncPayload>()
     private val remoteFlow = MutableSharedFlow<SyncPayload>(extraBufferCapacity = 8)
 
@@ -23,6 +24,8 @@ private class FakeSyncTransport : SyncTransport {
     }
 
     override fun observeRemoteState(): Flow<SyncPayload> = remoteFlow
+
+    override suspend fun getCurrentRemoteState(): SyncPayload? = storedRemoteState
 
     suspend fun emitRemote(payload: SyncPayload) {
         remoteFlow.emit(payload)
@@ -43,8 +46,19 @@ private class FlakySyncTransport(private val failures: Int) : SyncTransport {
         emitAll(remoteFlow)
     }
 
+    override suspend fun getCurrentRemoteState(): SyncPayload? = null
+
     suspend fun emitRemote(payload: SyncPayload) {
         remoteFlow.emit(payload)
+    }
+}
+
+/** Never resolves [getCurrentRemoteState], to exercise [SyncCoordinator.awaitInitialSync]'s timeout. */
+private class HangingSyncTransport : SyncTransport {
+    override suspend fun publish(payload: SyncPayload) = Unit
+    override fun observeRemoteState(): Flow<SyncPayload> = MutableSharedFlow()
+    override suspend fun getCurrentRemoteState(): SyncPayload? {
+        awaitCancellation()
     }
 }
 
@@ -168,5 +182,75 @@ class SyncCoordinatorTest {
         // Retries are exhausted and the failure is swallowed by .catch, rather than propagating out
         // of the launched coroutine and crashing the parent scope.
         assertTrue(coroutineContext[Job]!!.isActive)
+    }
+
+    @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun `start seeds lastKnown from getCurrentRemoteState before any remote event arrives`() = runTest {
+        val stored = payload(40_000L)
+        val transport = FakeSyncTransport(storedRemoteState = stored)
+        val received = mutableListOf<SyncPayload>()
+        val coordinator = SyncCoordinator(transport, this) { received.add(it) }
+
+        val job = coordinator.start()
+        advanceUntilIdle()
+
+        assertEquals(listOf(stored), received)
+        job.cancel()
+    }
+
+    @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun `a stored seed older than a payload already published locally does not overwrite it`() = runTest {
+        val transport = FakeSyncTransport(storedRemoteState = payload(10_000L))
+        val received = mutableListOf<SyncPayload>()
+        val coordinator = SyncCoordinator(transport, this) { received.add(it) }
+
+        coordinator.publishLocalState(payload(50_000L))
+        val job = coordinator.start()
+        advanceUntilIdle()
+
+        assertEquals(0, received.size)
+        job.cancel()
+    }
+
+    @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun `awaitInitialSync returns once the seed attempt resolves`() = runTest {
+        val transport = FakeSyncTransport(storedRemoteState = payload(1_000L))
+        val coordinator = SyncCoordinator(transport, this) {}
+
+        val job = coordinator.start()
+        coordinator.awaitInitialSync(timeoutMillis = 10_000)
+
+        // If awaitInitialSync had actually blocked for the full timeout, this virtual-time assertion
+        // would fail: runTest's scheduler only advances as far as awaitInitialSync's own suspension
+        // required, which is far less than 10s once the seed coroutine has already completed.
+        assertTrue(testScheduler.currentTime < 10_000)
+        job.cancel()
+    }
+
+    @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun `awaitInitialSync gives up after its timeout when the seed never resolves`() = runTest {
+        val coordinator = SyncCoordinator(HangingSyncTransport(), this) {}
+
+        val job = coordinator.start()
+        coordinator.awaitInitialSync(timeoutMillis = 2_000)
+
+        assertEquals(2_000L, testScheduler.currentTime)
+        job.cancel()
+    }
+
+    @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun `awaitInitialSync is safe to call more than once`() = runTest {
+        val transport = FakeSyncTransport(storedRemoteState = payload(1_000L))
+        val coordinator = SyncCoordinator(transport, this) {}
+
+        val job = coordinator.start()
+        coordinator.awaitInitialSync()
+        coordinator.awaitInitialSync()
+        job.cancel()
     }
 }

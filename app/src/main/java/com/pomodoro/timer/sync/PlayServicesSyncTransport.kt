@@ -62,7 +62,7 @@ class PlayServicesSyncTransport(context: Context) : SyncTransport {
      * Reads whatever state is already published, since [observeRemoteState] only ever delivers
      * *future* changes and would otherwise leave a freshly-started service stuck on defaults.
      */
-    suspend fun fetchCurrentState(): SyncPayload? {
+    override suspend fun getCurrentRemoteState(): SyncPayload? {
         val items = dataClient.dataItems.await()
         try {
             for (item in items) {
