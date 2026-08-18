@@ -2,6 +2,7 @@ package com.pomodoro.timer.settings
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import com.pomodoro.timer.core.TimerDefaults
@@ -15,6 +16,8 @@ class TimerSettingsRepository(private val dataStore: DataStore<Preferences>) {
         val BREAK_MINUTES_KEY = intPreferencesKey("break_minutes")
         val LONG_BREAK_MINUTES_KEY = intPreferencesKey("long_break_minutes")
         val POMODOROS_UNTIL_LONG_BREAK_KEY = intPreferencesKey("pomodoros_until_long_break")
+        val AUTO_START_BREAK_KEY = booleanPreferencesKey("auto_start_break")
+        val AUTO_START_FOCUS_KEY = booleanPreferencesKey("auto_start_focus")
         const val DEFAULT_FOCUS_MINUTES = TimerDefaults.DEFAULT_FOCUS_MINUTES
         const val DEFAULT_BREAK_MINUTES = TimerDefaults.DEFAULT_BREAK_MINUTES
         const val MIN_FOCUS_MINUTES = TimerDefaults.MIN_FOCUS_MINUTES
@@ -34,7 +37,9 @@ class TimerSettingsRepository(private val dataStore: DataStore<Preferences>) {
             focusMinutes = prefs[FOCUS_MINUTES_KEY] ?: DEFAULT_FOCUS_MINUTES,
             breakMinutes = prefs[BREAK_MINUTES_KEY] ?: DEFAULT_BREAK_MINUTES,
             longBreakMinutes = prefs[LONG_BREAK_MINUTES_KEY] ?: DEFAULT_LONG_BREAK_MINUTES,
-            pomodorosUntilLongBreak = prefs[POMODOROS_UNTIL_LONG_BREAK_KEY] ?: DEFAULT_POMODOROS_UNTIL_LONG_BREAK
+            pomodorosUntilLongBreak = prefs[POMODOROS_UNTIL_LONG_BREAK_KEY] ?: DEFAULT_POMODOROS_UNTIL_LONG_BREAK,
+            autoStartBreak = prefs[AUTO_START_BREAK_KEY] ?: false,
+            autoStartFocus = prefs[AUTO_START_FOCUS_KEY] ?: false
         )
     }
 
@@ -54,5 +59,13 @@ class TimerSettingsRepository(private val dataStore: DataStore<Preferences>) {
         dataStore.edit {
             it[POMODOROS_UNTIL_LONG_BREAK_KEY] = count.coerceIn(MIN_POMODOROS_UNTIL_LONG_BREAK, MAX_POMODOROS_UNTIL_LONG_BREAK)
         }
+    }
+
+    suspend fun updateAutoStartBreak(enabled: Boolean) {
+        dataStore.edit { it[AUTO_START_BREAK_KEY] = enabled }
+    }
+
+    suspend fun updateAutoStartFocus(enabled: Boolean) {
+        dataStore.edit { it[AUTO_START_FOCUS_KEY] = enabled }
     }
 }

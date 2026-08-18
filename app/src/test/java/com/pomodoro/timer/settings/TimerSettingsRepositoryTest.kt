@@ -96,4 +96,27 @@ class TimerSettingsRepositoryTest {
         repository.updatePomodorosUntilLongBreak(0)
         assertEquals(2, repository.settings.first().pomodorosUntilLongBreak)
     }
+
+    @Test
+    fun `settings default to autostart disabled`() = runTest {
+        val repository = TimerSettingsRepository(newDataStore())
+
+        val settings = repository.settings.first()
+
+        assertEquals(false, settings.autoStartBreak)
+        assertEquals(false, settings.autoStartFocus)
+    }
+
+    @Test
+    fun `updateAutoStartBreak and updateAutoStartFocus persist independently`() = runTest {
+        val repository = TimerSettingsRepository(newDataStore())
+
+        repository.updateAutoStartBreak(true)
+        assertEquals(true, repository.settings.first().autoStartBreak)
+        assertEquals(false, repository.settings.first().autoStartFocus)
+
+        repository.updateAutoStartFocus(true)
+        assertEquals(true, repository.settings.first().autoStartBreak)
+        assertEquals(true, repository.settings.first().autoStartFocus)
+    }
 }
