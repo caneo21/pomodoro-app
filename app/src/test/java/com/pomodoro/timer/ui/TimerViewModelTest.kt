@@ -152,4 +152,20 @@ class TimerViewModelTest {
         assertEquals(20, uiState.longBreakMinutes)
         assertEquals(3, uiState.pomodorosUntilLongBreak)
     }
+
+    @Test
+    fun `updateAutoStartBreak and updateAutoStartFocus persist through the repository`() = runTest(dispatcher) {
+        val timerState = MutableStateFlow(
+            TimerState(TimerPhase.FOCUS, isRunning = false, remainingMillis = 1_500_000L, totalMillis = 1_500_000L)
+        )
+        val viewModel = newViewModel(timerState)
+
+        viewModel.updateAutoStartBreak(true)
+        viewModel.updateAutoStartFocus(true)
+
+        val uiState = viewModel.uiState.first { it.autoStartBreak && it.autoStartFocus }
+
+        assertEquals(true, uiState.autoStartBreak)
+        assertEquals(true, uiState.autoStartFocus)
+    }
 }

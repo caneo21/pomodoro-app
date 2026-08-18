@@ -58,6 +58,14 @@ class TimerViewModel(
         viewModelScope.launch { settingsRepository.updatePomodorosUntilLongBreak(count) }
     }
 
+    fun updateAutoStartBreak(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.updateAutoStartBreak(enabled) }
+    }
+
+    fun updateAutoStartFocus(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.updateAutoStartFocus(enabled) }
+    }
+
     class Factory(private val appContext: Context) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -73,6 +81,8 @@ class TimerViewModel(
                     .putExtra(TimerService.EXTRA_BREAK_MINUTES, settings.breakMinutes)
                     .putExtra(TimerService.EXTRA_LONG_BREAK_MINUTES, settings.longBreakMinutes)
                     .putExtra(TimerService.EXTRA_POMODOROS_UNTIL_LONG_BREAK, settings.pomodorosUntilLongBreak)
+                    .putExtra(TimerService.EXTRA_AUTO_START_BREAK, settings.autoStartBreak)
+                    .putExtra(TimerService.EXTRA_AUTO_START_FOCUS, settings.autoStartFocus)
                 ContextCompat.startForegroundService(appContext, intent)
             }
             return TimerViewModel(TimerService.state, repository, onCommand, onUpdateDurations) as T
