@@ -66,8 +66,8 @@ class TimerEngineTest {
     }
 
     @Test
-    fun `tick past end of focus phase transitions to break without drift`() {
-        val engine = TimerEngine(focusMillis, breakMillis)
+    fun `tick past end of focus phase transitions to break without drift when autostart is enabled`() {
+        val engine = TimerEngine(focusMillis, breakMillis, autoStartBreak = true)
         engine.start(now = 0L)
 
         // tick 5 seconds after focus should have ended
@@ -81,8 +81,8 @@ class TimerEngineTest {
     }
 
     @Test
-    fun `tick past end of break phase transitions back to focus`() {
-        val engine = TimerEngine(focusMillis, breakMillis)
+    fun `tick past end of break phase transitions back to focus when autostart is enabled`() {
+        val engine = TimerEngine(focusMillis, breakMillis, autoStartBreak = true, autoStartFocus = true)
         engine.start(now = 0L)
         engine.tick(now = focusMillis) // flips to SHORT_BREAK
 
@@ -173,7 +173,7 @@ class TimerEngineTest {
     }
 
     @Test
-    fun `adoptRemote crosses a phase boundary when the payload is older than its remaining time`() {
+    fun `adoptRemote crosses a phase boundary when the payload is older than its remaining time and autostart is enabled`() {
         val engine = TimerEngine(focusMillis, breakMillis)
         val payload = SyncPayload(
             phase = TimerPhase.FOCUS,
@@ -182,7 +182,8 @@ class TimerEngineTest {
             totalMillis = focusMillis,
             focusMinutes = 25,
             breakMinutes = 5,
-            lastActionAtMillis = 1_000_000L
+            lastActionAtMillis = 1_000_000L,
+            autoStartBreak = true
         )
 
         // 60s after publish: focus ended 55s ago, so we are 55s into the 5-minute break.
@@ -195,7 +196,7 @@ class TimerEngineTest {
     }
 
     @Test
-    fun `adoptRemote across multiple phase boundaries matches a tick-driven engine`() {
+    fun `adoptRemote across multiple phase boundaries matches a tick-driven engine when autostart is enabled`() {
         val payload = SyncPayload(
             phase = TimerPhase.FOCUS,
             isRunning = true,
@@ -203,7 +204,9 @@ class TimerEngineTest {
             totalMillis = focusMillis,
             focusMinutes = 25,
             breakMinutes = 5,
-            lastActionAtMillis = 1_000_000L
+            lastActionAtMillis = 1_000_000L,
+            autoStartBreak = true,
+            autoStartFocus = true
         )
         // Focus ends at +5s, break ends at +305s, the next focus ends at +1_805s. Land 10s into it.
         val now = 1_000_000L + 5_000L + breakMillis + 10_000L
@@ -213,7 +216,7 @@ class TimerEngineTest {
         // Reference: an engine driven forward by plain ticks over the same wall-clock span. Starting
         // at 1_005_000 - focusMillis puts its focus phase's end exactly where the payload's is.
         val startedAt = 1_005_000L - focusMillis
-        val reference = TimerEngine(focusMillis, breakMillis)
+        val reference = TimerEngine(focusMillis, breakMillis, autoStartBreak = true, autoStartFocus = true)
         reference.start(startedAt)
         var t = startedAt
         while (t < now) {
@@ -272,7 +275,10 @@ class TimerEngineTest {
 
     @Test
     fun `completing the Nth focus session enters LONG_BREAK and resets the count when it ends`() {
-        val engine = TimerEngine(focusMillis, breakMillis, longBreakMillis = 900_000L, pomodorosUntilLongBreak = 2)
+        val engine = TimerEngine(
+            focusMillis, breakMillis, longBreakMillis = 900_000L, pomodorosUntilLongBreak = 2,
+            autoStartBreak = true, autoStartFocus = true
+        )
         engine.start(now = 0L)
 
         engine.tick(now = focusMillis) // 1st FOCUS done -> SHORT_BREAK, completedPomodoros = 1
@@ -290,7 +296,7 @@ class TimerEngineTest {
 
     @Test
     fun `the default threshold of 4 enters LONG_BREAK on the 4th focus completion, not the 3rd`() {
-        val engine = TimerEngine(focusMillis, breakMillis) // relies on the default pomodorosUntilLongBreak = 4
+        val engine = TimerEngine(focusMillis, breakMillis, autoStartBreak = true, autoStartFocus = true) // relies on the default pomodorosUntilLongBreak = 4
         engine.start(now = 0L)
 
         var now = 0L
@@ -370,7 +376,9 @@ class TimerEngineTest {
             lastActionAtMillis = 1_000_000L,
             longBreakMinutes = 15,
             pomodorosUntilLongBreak = threshold,
-            completedPomodoros = 0
+            completedPomodoros = 0,
+            autoStartBreak = true,
+            autoStartFocus = true
         )
         // Focus ends at +5s (completedPomodoros -> 1, meets threshold -> LONG_BREAK), long break runs
         // 15 minutes, then FOCUS resumes (completedPomodoros resets to 0). Land 10s into that FOCUS.
@@ -381,7 +389,7 @@ class TimerEngineTest {
         // Reference: an engine driven forward by plain ticks over the same wall-clock span. Starting
         // at 1_005_000 - focusMillis puts its focus phase's end exactly where the payload's is.
         val startedAt = 1_005_000L - focusMillis
-        val reference = TimerEngine(focusMillis, breakMillis, longBreakMillis, threshold)
+        val reference = TimerEngine(focusMillis, breakMillis, longBreakMillis, threshold, autoStartBreak = true, autoStartFocus = true)
         reference.start(startedAt)
         var t = startedAt
         while (t < now) {
@@ -421,5 +429,86 @@ class TimerEngineTest {
         assertEquals(TimerPhase.LONG_BREAK, state.phase)
         assertEquals(TimerDefaults.MIN_BREAK_MINUTES * 60_000L, state.totalMillis)
         assertEquals(1, state.completedPomodoros)
+    }
+
+    @Test
+    fun `tick past end of focus phase pauses at SHORT_BREAK when autoStartBreak is false`() {
+        val engine = TimerEngine(focusMillis, breakMillis, autoStartBreak = false)
+        engine.start(now = 0L)
+
+        val state = engine.tick(now = focusMillis + 5_000L)
+
+        assertEquals(TimerPhase.SHORT_BREAK, state.phase)
+        assertFalse(state.isRunning)
+        assertEquals(breakMillis, state.remainingMillis)
+        assertEquals(breakMillis, state.totalMillis)
+        assertEquals(1, state.completedPomodoros)
+    }
+
+    @Test
+    fun `tick past end of break phase pauses at FOCUS when autoStartFocus is false`() {
+        val engine = TimerEngine(focusMillis, breakMillis, autoStartBreak = true, autoStartFocus = false)
+        engine.start(now = 0L)
+        engine.tick(now = focusMillis) // FOCUS -> SHORT_BREAK, keeps running (autoStartBreak = true)
+
+        val state = engine.tick(now = focusMillis + breakMillis + 2_000L)
+
+        assertEquals(TimerPhase.FOCUS, state.phase)
+        assertFalse(state.isRunning)
+        assertEquals(focusMillis, state.remainingMillis)
+        assertEquals(focusMillis, state.totalMillis)
+    }
+
+    @Test
+    fun `autoStartFocus, not autoStartBreak, governs leaving LONG_BREAK`() {
+        val engine = TimerEngine(
+            focusMillis, breakMillis, longBreakMillis = 900_000L, pomodorosUntilLongBreak = 1,
+            autoStartBreak = true, autoStartFocus = false
+        )
+        engine.start(now = 0L)
+        val enteredLongBreak = engine.tick(now = focusMillis) // FOCUS -> LONG_BREAK, keeps running
+        assertTrue(enteredLongBreak.isRunning)
+
+        val state = engine.tick(now = focusMillis + 900_000L + 1_000L)
+
+        assertEquals(TimerPhase.FOCUS, state.phase)
+        assertFalse(state.isRunning)
+        assertEquals(focusMillis, state.remainingMillis)
+    }
+
+    @Test
+    fun `adoptRemote stops exactly at a boundary governed off, without fast-forwarding further`() {
+        val payload = SyncPayload(
+            phase = TimerPhase.FOCUS,
+            isRunning = true,
+            remainingMillis = 5_000L,
+            totalMillis = focusMillis,
+            focusMinutes = 25,
+            breakMinutes = 5,
+            lastActionAtMillis = 1_000_000L,
+            autoStartBreak = false,
+            autoStartFocus = true
+        )
+        // Enough elapsed time to have crossed FOCUS -> SHORT_BREAK -> FOCUS if fully auto-continuing;
+        // autoStartBreak = false must stop it the instant it enters SHORT_BREAK.
+        val now = 1_000_000L + 5_000L + breakMillis + 10_000L
+
+        val state = TimerEngine(focusMillis, breakMillis).adoptRemote(payload, now)
+
+        assertEquals(TimerPhase.SHORT_BREAK, state.phase)
+        assertFalse(state.isRunning)
+        assertEquals(breakMillis, state.remainingMillis)
+    }
+
+    @Test
+    fun `updateDurations changes which future transitions auto-continue`() {
+        val engine = TimerEngine(focusMillis, breakMillis, autoStartBreak = false)
+        engine.updateDurations(focusMillis, breakMillis, autoStartBreak = true)
+        engine.start(now = 0L)
+
+        val state = engine.tick(now = focusMillis + 5_000L)
+
+        assertEquals(TimerPhase.SHORT_BREAK, state.phase)
+        assertTrue(state.isRunning)
     }
 }

@@ -17,5 +17,7 @@ data class SyncPayload(
     val lastActionAtMillis: Long,
     val longBreakMinutes: Int = TimerDefaults.DEFAULT_LONG_BREAK_MINUTES,
     val pomodorosUntilLongBreak: Int = TimerDefaults.DEFAULT_POMODOROS_UNTIL_LONG_BREAK,
-    val completedPomodoros: Int = 0
+    val completedPomodoros: Int = 0,
+    val autoStartBreak: Boolean = false,
+    val autoStartFocus: Boolean = false
 )

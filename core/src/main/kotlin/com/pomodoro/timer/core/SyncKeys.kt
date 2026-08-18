@@ -13,4 +13,6 @@ object SyncKeys {
     const val KEY_LONG_BREAK_MINUTES = "longBreakMinutes"
     const val KEY_POMODOROS_UNTIL_LONG_BREAK = "pomodorosUntilLongBreak"
     const val KEY_COMPLETED_POMODOROS = "completedPomodoros"
+    const val KEY_AUTO_START_BREAK = "autoStartBreak"
+    const val KEY_AUTO_START_FOCUS = "autoStartFocus"
 }

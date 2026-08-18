@@ -4,7 +4,9 @@ class TimerEngine(
     private var focusMillis: Long,
     private var shortBreakMillis: Long,
     private var longBreakMillis: Long = TimerDefaults.DEFAULT_LONG_BREAK_MINUTES * 60_000L,
-    private var pomodorosUntilLongBreak: Int = TimerDefaults.DEFAULT_POMODOROS_UNTIL_LONG_BREAK
+    private var pomodorosUntilLongBreak: Int = TimerDefaults.DEFAULT_POMODOROS_UNTIL_LONG_BREAK,
+    private var autoStartBreak: Boolean = false,
+    private var autoStartFocus: Boolean = false
 ) {
     private var phase: TimerPhase = TimerPhase.FOCUS
     private var isRunning: Boolean = false
@@ -41,16 +43,28 @@ class TimerEngine(
     }
 
     /**
-     * Flips [phase] forward (via [nextPhase]) until [endTimestamp] is in the future. Durations are
-     * floored at [MIN_PHASE_MILLIS] before they ever reach here, so this always terminates.
+     * Flips [phase] forward (via [nextPhase]) until [endTimestamp] is in the future, unless a
+     * governed-off transition is hit first — then it stops running at that phase's full duration,
+     * exactly like a manual pause, even if [now] is far enough ahead to have crossed further
+     * boundaries. Durations are floored at [MIN_PHASE_MILLIS] before they ever reach here, so a
+     * fully auto-continuing run always terminates.
      */
     private fun advanceAcrossPhaseBoundaries(now: Long) {
-        while (now >= endTimestamp) {
+        while (isRunning && now >= endTimestamp) {
+            val departingPhase = phase
             phase = nextPhase()
-            endTimestamp += durationFor(phase)
             currentPhaseDurationMillis = durationFor(phase)
+            if (autoStartAllowed(departingPhase)) {
+                endTimestamp += currentPhaseDurationMillis
+            } else {
+                isRunning = false
+                remainingWhenIdle = currentPhaseDurationMillis
+            }
         }
     }
+
+    private fun autoStartAllowed(departingPhase: TimerPhase): Boolean =
+        if (departingPhase == TimerPhase.FOCUS) autoStartBreak else autoStartFocus
 
     fun currentState(now: Long): TimerState {
         val remaining = if (isRunning) (endTimestamp - now).coerceAtLeast(0) else remainingWhenIdle
@@ -91,7 +105,9 @@ class TimerEngine(
         if (!isRunning) return currentState(now)
 
         advanceAcrossPhaseBoundaries(now)
-        remainingWhenIdle = (endTimestamp - now).coerceAtLeast(0)
+        if (isRunning) {
+            remainingWhenIdle = (endTimestamp - now).coerceAtLeast(0)
+        }
         return currentState(now)
     }
 
@@ -99,12 +115,16 @@ class TimerEngine(
         focusMillis: Long,
         shortBreakMillis: Long,
         longBreakMillis: Long = this.longBreakMillis,
-        pomodorosUntilLongBreak: Int = this.pomodorosUntilLongBreak
+        pomodorosUntilLongBreak: Int = this.pomodorosUntilLongBreak,
+        autoStartBreak: Boolean = this.autoStartBreak,
+        autoStartFocus: Boolean = this.autoStartFocus
     ) {
         this.focusMillis = focusMillis.coerceAtLeast(MIN_PHASE_MILLIS)
         this.shortBreakMillis = shortBreakMillis.coerceAtLeast(MIN_PHASE_MILLIS)
         this.longBreakMillis = longBreakMillis.coerceAtLeast(MIN_PHASE_MILLIS)
         this.pomodorosUntilLongBreak = pomodorosUntilLongBreak.coerceAtLeast(1)
+        this.autoStartBreak = autoStartBreak
+        this.autoStartFocus = autoStartFocus
         if (!isRunning) {
             remainingWhenIdle = durationFor(phase)
             currentPhaseDurationMillis = durationFor(phase)
@@ -124,6 +144,8 @@ class TimerEngine(
         shortBreakMillis = (payload.breakMinutes * 60_000L).coerceAtLeast(MIN_PHASE_MILLIS)
         longBreakMillis = (payload.longBreakMinutes * 60_000L).coerceAtLeast(MIN_PHASE_MILLIS)
         pomodorosUntilLongBreak = payload.pomodorosUntilLongBreak.coerceAtLeast(1)
+        autoStartBreak = payload.autoStartBreak
+        autoStartFocus = payload.autoStartFocus
         phase = payload.phase
         completedPomodoros = payload.completedPomodoros
         currentPhaseDurationMillis = payload.totalMillis.coerceAtLeast(MIN_PHASE_MILLIS)
@@ -135,7 +157,9 @@ class TimerEngine(
             // the boundary we already are.
             endTimestamp = now + (payload.remainingMillis - elapsedSincePublish)
             advanceAcrossPhaseBoundaries(now)
-            remainingWhenIdle = (endTimestamp - now).coerceAtLeast(0)
+            if (isRunning) {
+                remainingWhenIdle = (endTimestamp - now).coerceAtLeast(0)
+            }
         } else {
             remainingWhenIdle = payload.remainingMillis
         }
