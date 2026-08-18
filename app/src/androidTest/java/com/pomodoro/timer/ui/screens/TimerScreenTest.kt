@@ -1,12 +1,14 @@
 package com.pomodoro.timer.ui.screens
 
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.activity.ComponentActivity
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.pomodoro.timer.core.TimerPhase
 import com.pomodoro.timer.ui.TimerUiState
 import com.pomodoro.timer.ui.theme.PomodoroTheme
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -14,7 +16,7 @@ import org.junit.Test
 class TimerScreenTest {
 
     @get:Rule
-    val composeRule = createComposeRule()
+    val composeRule = createAndroidComposeRule<ComponentActivity>()
 
     @Test
     fun startButton_isShownWhenIdle_andInvokesCallback() {
@@ -106,5 +108,59 @@ class TimerScreenTest {
 
         composeRule.onNodeWithTag("cycleProgressText").assertExists()
         composeRule.onNodeWithText("2/4").assertExists()
+    }
+
+    @Test
+    fun keepScreenOn_isAppliedToWindow_onlyWhileRunning() {
+        composeRule.setContent {
+            PomodoroTheme {
+                TimerScreen(
+                    uiState = TimerUiState(keepScreenOn = true, isRunning = true),
+                    onStart = {},
+                    onPause = {},
+                    onReset = {},
+                    onSettingsClick = {}
+                )
+            }
+        }
+
+        composeRule.waitForIdle()
+        assertTrue(composeRule.activity.window.decorView.keepScreenOn)
+    }
+
+    @Test
+    fun keepScreenOn_isNotAppliedToWindow_whenNotRunning() {
+        composeRule.setContent {
+            PomodoroTheme {
+                TimerScreen(
+                    uiState = TimerUiState(keepScreenOn = true, isRunning = false),
+                    onStart = {},
+                    onPause = {},
+                    onReset = {},
+                    onSettingsClick = {}
+                )
+            }
+        }
+
+        composeRule.waitForIdle()
+        assertFalse(composeRule.activity.window.decorView.keepScreenOn)
+    }
+
+    @Test
+    fun keepScreenOn_isNotAppliedToWindow_whenSettingDisabled() {
+        composeRule.setContent {
+            PomodoroTheme {
+                TimerScreen(
+                    uiState = TimerUiState(keepScreenOn = false, isRunning = true),
+                    onStart = {},
+                    onPause = {},
+                    onReset = {},
+                    onSettingsClick = {}
+                )
+            }
+        }
+
+        composeRule.waitForIdle()
+        assertFalse(composeRule.activity.window.decorView.keepScreenOn)
     }
 }

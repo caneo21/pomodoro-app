@@ -66,6 +66,10 @@ class TimerViewModel(
         viewModelScope.launch { settingsRepository.updateAutoStartFocus(enabled) }
     }
 
+    fun updateKeepScreenOn(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.updateKeepScreenOn(enabled) }
+    }
+
     class Factory(private val appContext: Context) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {

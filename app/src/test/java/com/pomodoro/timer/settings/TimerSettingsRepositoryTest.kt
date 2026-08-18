@@ -119,4 +119,24 @@ class TimerSettingsRepositoryTest {
         assertEquals(true, repository.settings.first().autoStartBreak)
         assertEquals(true, repository.settings.first().autoStartFocus)
     }
+
+    @Test
+    fun `settings default to keep screen on disabled`() = runTest {
+        val repository = TimerSettingsRepository(newDataStore())
+
+        val settings = repository.settings.first()
+
+        assertEquals(false, settings.keepScreenOn)
+    }
+
+    @Test
+    fun `updateKeepScreenOn persists`() = runTest {
+        val repository = TimerSettingsRepository(newDataStore())
+
+        repository.updateKeepScreenOn(true)
+        assertEquals(true, repository.settings.first().keepScreenOn)
+
+        repository.updateKeepScreenOn(false)
+        assertEquals(false, repository.settings.first().keepScreenOn)
+    }
 }

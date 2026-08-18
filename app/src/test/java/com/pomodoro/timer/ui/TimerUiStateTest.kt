@@ -62,4 +62,14 @@ class TimerUiStateTest {
         assertEquals(true, uiState.autoStartBreak)
         assertEquals(false, uiState.autoStartFocus)
     }
+
+    @Test
+    fun `buildUiState carries keepScreenOn through`() {
+        val timer = TimerState(phase = TimerPhase.FOCUS, isRunning = false, remainingMillis = 1_500_000L, totalMillis = 1_500_000L)
+        val settings = TimerSettings(focusMinutes = 25, breakMinutes = 5, keepScreenOn = true)
+
+        val uiState = buildUiState(timer, settings)
+
+        assertEquals(true, uiState.keepScreenOn)
+    }
 }

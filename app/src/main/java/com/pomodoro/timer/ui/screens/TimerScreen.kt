@@ -21,9 +21,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.pomodoro.timer.core.TimerPhase
@@ -39,6 +41,12 @@ fun TimerScreen(
     onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val view = LocalView.current
+    DisposableEffect(uiState.keepScreenOn, uiState.isRunning) {
+        view.keepScreenOn = uiState.keepScreenOn && uiState.isRunning
+        onDispose { view.keepScreenOn = false }
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()

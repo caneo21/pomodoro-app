@@ -101,4 +101,27 @@ class SettingsScreenTest {
         assertTrue(breakToggled == true)
         assertTrue(focusToggled == true)
     }
+
+    @Test
+    fun keepScreenOnSwitch_isDisplayed_andInvokesCallback() {
+        var keepScreenOnToggled: Boolean? = null
+        composeRule.setContent {
+            PomodoroTheme {
+                SettingsScreen(
+                    focusMinutes = 25,
+                    breakMinutes = 5,
+                    keepScreenOn = false,
+                    onFocusMinutesChange = {},
+                    onBreakMinutesChange = {},
+                    onKeepScreenOnChange = { keepScreenOnToggled = it },
+                    onBack = {}
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("keepScreenOnLabel").assertExists()
+        composeRule.onNodeWithTag("keepScreenOnSwitch").performClick()
+
+        assertTrue(keepScreenOnToggled == true)
+    }
 }

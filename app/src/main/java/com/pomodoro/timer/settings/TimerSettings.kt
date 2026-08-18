@@ -8,5 +8,6 @@ data class TimerSettings(
     val longBreakMinutes: Int = TimerDefaults.DEFAULT_LONG_BREAK_MINUTES,
     val pomodorosUntilLongBreak: Int = TimerDefaults.DEFAULT_POMODOROS_UNTIL_LONG_BREAK,
     val autoStartBreak: Boolean = false,
-    val autoStartFocus: Boolean = false
+    val autoStartFocus: Boolean = false,
+    val keepScreenOn: Boolean = false
 )

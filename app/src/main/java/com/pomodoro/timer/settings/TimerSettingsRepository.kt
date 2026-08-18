@@ -18,6 +18,7 @@ class TimerSettingsRepository(private val dataStore: DataStore<Preferences>) {
         val POMODOROS_UNTIL_LONG_BREAK_KEY = intPreferencesKey("pomodoros_until_long_break")
         val AUTO_START_BREAK_KEY = booleanPreferencesKey("auto_start_break")
         val AUTO_START_FOCUS_KEY = booleanPreferencesKey("auto_start_focus")
+        val KEEP_SCREEN_ON_KEY = booleanPreferencesKey("keep_screen_on")
         const val DEFAULT_FOCUS_MINUTES = TimerDefaults.DEFAULT_FOCUS_MINUTES
         const val DEFAULT_BREAK_MINUTES = TimerDefaults.DEFAULT_BREAK_MINUTES
         const val MIN_FOCUS_MINUTES = TimerDefaults.MIN_FOCUS_MINUTES
@@ -39,7 +40,8 @@ class TimerSettingsRepository(private val dataStore: DataStore<Preferences>) {
             longBreakMinutes = prefs[LONG_BREAK_MINUTES_KEY] ?: DEFAULT_LONG_BREAK_MINUTES,
             pomodorosUntilLongBreak = prefs[POMODOROS_UNTIL_LONG_BREAK_KEY] ?: DEFAULT_POMODOROS_UNTIL_LONG_BREAK,
             autoStartBreak = prefs[AUTO_START_BREAK_KEY] ?: false,
-            autoStartFocus = prefs[AUTO_START_FOCUS_KEY] ?: false
+            autoStartFocus = prefs[AUTO_START_FOCUS_KEY] ?: false,
+            keepScreenOn = prefs[KEEP_SCREEN_ON_KEY] ?: false
         )
     }
 
@@ -67,5 +69,9 @@ class TimerSettingsRepository(private val dataStore: DataStore<Preferences>) {
 
     suspend fun updateAutoStartFocus(enabled: Boolean) {
         dataStore.edit { it[AUTO_START_FOCUS_KEY] = enabled }
+    }
+
+    suspend fun updateKeepScreenOn(enabled: Boolean) {
+        dataStore.edit { it[KEEP_SCREEN_ON_KEY] = enabled }
     }
 }

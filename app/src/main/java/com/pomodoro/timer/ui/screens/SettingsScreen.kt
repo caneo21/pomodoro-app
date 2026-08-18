@@ -44,6 +44,8 @@ fun SettingsScreen(
     autoStartFocus: Boolean = false,
     onAutoStartBreakChange: (Boolean) -> Unit = {},
     onAutoStartFocusChange: (Boolean) -> Unit = {},
+    keepScreenOn: Boolean = false,
+    onKeepScreenOnChange: (Boolean) -> Unit = {},
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -139,6 +141,23 @@ fun SettingsScreen(
                 checked = autoStartFocus,
                 onCheckedChange = onAutoStartFocusChange,
                 modifier = Modifier.testTag("autoStartFocusSwitch")
+            )
+        }
+
+        Spacer(Modifier.height(16.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "화면 꺼짐 방지",
+                modifier = Modifier.weight(1f).testTag("keepScreenOnLabel")
+            )
+            Switch(
+                checked = keepScreenOn,
+                onCheckedChange = onKeepScreenOnChange,
+                modifier = Modifier.testTag("keepScreenOnSwitch")
             )
         }
 

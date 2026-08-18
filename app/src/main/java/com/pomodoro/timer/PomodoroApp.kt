@@ -44,6 +44,8 @@ fun PomodoroApp(viewModel: TimerViewModel) {
                 onPomodorosUntilLongBreakChange = viewModel::updatePomodorosUntilLongBreak,
                 onAutoStartBreakChange = viewModel::updateAutoStartBreak,
                 onAutoStartFocusChange = viewModel::updateAutoStartFocus,
+                keepScreenOn = uiState.keepScreenOn,
+                onKeepScreenOnChange = viewModel::updateKeepScreenOn,
                 onBack = { navController.popBackStack() }
             )
         }
