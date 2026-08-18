@@ -34,6 +34,8 @@ class WearPlayServicesSyncTransport(context: Context) : SyncTransport {
             dataMap.putInt(SyncKeys.KEY_LONG_BREAK_MINUTES, payload.longBreakMinutes)
             dataMap.putInt(SyncKeys.KEY_POMODOROS_UNTIL_LONG_BREAK, payload.pomodorosUntilLongBreak)
             dataMap.putInt(SyncKeys.KEY_COMPLETED_POMODOROS, payload.completedPomodoros)
+            dataMap.putBoolean(SyncKeys.KEY_AUTO_START_BREAK, payload.autoStartBreak)
+            dataMap.putBoolean(SyncKeys.KEY_AUTO_START_FOCUS, payload.autoStartFocus)
         }.asPutDataRequest().setUrgent()
         dataClient.putDataItem(request).await()
     }
@@ -86,6 +88,8 @@ class WearPlayServicesSyncTransport(context: Context) : SyncTransport {
             SyncKeys.KEY_POMODOROS_UNTIL_LONG_BREAK,
             TimerDefaults.DEFAULT_POMODOROS_UNTIL_LONG_BREAK
         ),
-        completedPomodoros = map.getInt(SyncKeys.KEY_COMPLETED_POMODOROS)
+        completedPomodoros = map.getInt(SyncKeys.KEY_COMPLETED_POMODOROS),
+        autoStartBreak = map.getBoolean(SyncKeys.KEY_AUTO_START_BREAK),
+        autoStartFocus = map.getBoolean(SyncKeys.KEY_AUTO_START_FOCUS)
     )
 }
