@@ -1,14 +1,18 @@
 package com.pomodoro.timer.ui.screens
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -19,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
@@ -55,6 +60,7 @@ fun SettingsScreen(
             .fillMaxSize()
             .windowInsetsPadding(WindowInsets.safeDrawing)
             .padding(24.dp)
+            .verticalScroll(rememberScrollState())
     ) {
         Text("설정", style = MaterialTheme.typography.headlineMedium)
         Spacer(Modifier.height(24.dp))
@@ -103,8 +109,15 @@ fun SettingsScreen(
         )
 
         Spacer(Modifier.height(24.dp))
-        Row {
-            Text("자동으로 휴식 시작", modifier = Modifier.testTag("autoStartBreakLabel"))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "자동으로 휴식 시작",
+                modifier = Modifier.weight(1f).testTag("autoStartBreakLabel")
+            )
             Switch(
                 checked = autoStartBreak,
                 onCheckedChange = onAutoStartBreakChange,
@@ -113,8 +126,15 @@ fun SettingsScreen(
         }
 
         Spacer(Modifier.height(16.dp))
-        Row {
-            Text("자동으로 다음 뽀모도로 시작", modifier = Modifier.testTag("autoStartFocusLabel"))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "자동으로 다음 뽀모도로 시작",
+                modifier = Modifier.weight(1f).testTag("autoStartFocusLabel")
+            )
             Switch(
                 checked = autoStartFocus,
                 onCheckedChange = onAutoStartFocusChange,

@@ -92,6 +92,9 @@ class SettingsScreenTest {
             }
         }
 
+        composeRule.onNodeWithTag("autoStartBreakLabel").assertExists()
+        composeRule.onNodeWithTag("autoStartFocusLabel").assertExists()
+
         composeRule.onNodeWithTag("autoStartBreakSwitch").performClick()
         composeRule.onNodeWithTag("autoStartFocusSwitch").performClick()
 

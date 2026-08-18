@@ -511,4 +511,21 @@ class TimerEngineTest {
         assertEquals(TimerPhase.SHORT_BREAK, state.phase)
         assertTrue(state.isRunning)
     }
+
+    @Test
+    fun `updateDurations mid-session does not retroactively auto-continue the in-flight phase`() {
+        val engine = TimerEngine(focusMillis, breakMillis, autoStartBreak = false)
+        engine.start(now = 0L)
+        engine.tick(now = 60_000L) // mid-FOCUS, no boundary crossed yet
+
+        engine.updateDurations(focusMillis, breakMillis, autoStartBreak = true)
+
+        val stillMidFocus = engine.currentState(now = 120_000L)
+        assertEquals(TimerPhase.FOCUS, stillMidFocus.phase)
+        assertTrue(stillMidFocus.isRunning)
+
+        val afterBoundary = engine.tick(now = focusMillis + 5_000L)
+        assertEquals(TimerPhase.SHORT_BREAK, afterBoundary.phase)
+        assertTrue(afterBoundary.isRunning) // now auto-continues, since autoStartBreak was flipped to true
+    }
 }
