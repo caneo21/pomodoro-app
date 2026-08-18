@@ -42,6 +42,8 @@ class TimerService : Service() {
         const val EXTRA_BREAK_MINUTES = "extra_break_minutes"
         const val EXTRA_LONG_BREAK_MINUTES = "extra_long_break_minutes"
         const val EXTRA_POMODOROS_UNTIL_LONG_BREAK = "extra_pomodoros_until_long_break"
+        const val EXTRA_AUTO_START_BREAK = "extra_auto_start_break"
+        const val EXTRA_AUTO_START_FOCUS = "extra_auto_start_focus"
 
         private const val CHANNEL_ID = "pomodoro_timer_channel"
         private const val SESSION_END_CHANNEL_ID = "pomodoro_session_end_channel"
@@ -69,6 +71,8 @@ class TimerService : Service() {
         private var breakMinutes: Int = TimerDefaults.DEFAULT_BREAK_MINUTES
         private var longBreakMinutes: Int = TimerDefaults.DEFAULT_LONG_BREAK_MINUTES
         private var pomodorosUntilLongBreak: Int = TimerDefaults.DEFAULT_POMODOROS_UNTIL_LONG_BREAK
+        private var autoStartBreak: Boolean = false
+        private var autoStartFocus: Boolean = false
     }
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -94,6 +98,8 @@ class TimerService : Service() {
         breakMinutes = payload.breakMinutes
         longBreakMinutes = payload.longBreakMinutes
         pomodorosUntilLongBreak = payload.pomodorosUntilLongBreak
+        autoStartBreak = payload.autoStartBreak
+        autoStartFocus = payload.autoStartFocus
         _state.value = engine.adoptRemote(payload, System.currentTimeMillis())
         if (_state.value.isRunning) startTicker() else stopTicker()
         updateOngoingNotification(_state.value)
@@ -111,7 +117,9 @@ class TimerService : Service() {
                 lastActionAtMillis = actionAtMillis,
                 longBreakMinutes = longBreakMinutes,
                 pomodorosUntilLongBreak = pomodorosUntilLongBreak,
-                completedPomodoros = state.completedPomodoros
+                completedPomodoros = state.completedPomodoros,
+                autoStartBreak = autoStartBreak,
+                autoStartFocus = autoStartFocus
             )
         )
     }
@@ -162,11 +170,15 @@ class TimerService : Service() {
                     EXTRA_POMODOROS_UNTIL_LONG_BREAK,
                     TimerDefaults.DEFAULT_POMODOROS_UNTIL_LONG_BREAK
                 )
+                autoStartBreak = intent.getBooleanExtra(EXTRA_AUTO_START_BREAK, false)
+                autoStartFocus = intent.getBooleanExtra(EXTRA_AUTO_START_FOCUS, false)
                 engine.updateDurations(
                     focusMinutes * 60_000L,
                     breakMinutes * 60_000L,
                     longBreakMinutes * 60_000L,
-                    pomodorosUntilLongBreak
+                    pomodorosUntilLongBreak,
+                    autoStartBreak,
+                    autoStartFocus
                 )
                 _state.value = engine.currentState(now)
                 publishSyncState(_state.value, now)
@@ -193,6 +205,10 @@ class TimerService : Service() {
                     publishSyncState(newState, System.currentTimeMillis())
                 }
                 updateOngoingNotification(newState)
+                if (!newState.isRunning) {
+                    tickerJob = null
+                    return@launch
+                }
             }
         }
     }
