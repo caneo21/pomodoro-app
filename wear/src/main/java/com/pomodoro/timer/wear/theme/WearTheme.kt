@@ -5,6 +5,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.wear.compose.material.Colors
 import androidx.wear.compose.material.MaterialTheme
 
+val PomodoroWearLongBreakAccent = Color(0xFF5C6BC0)
+
 private val PomodoroWearColors = Colors(
     primary = Color(0xFFE85D4A),
     primaryVariant = Color(0xFFB6432F),

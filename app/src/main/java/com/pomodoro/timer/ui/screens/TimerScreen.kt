@@ -23,10 +23,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.pomodoro.timer.core.TimerPhase
 import com.pomodoro.timer.ui.TimerUiState
+import com.pomodoro.timer.ui.theme.PomodoroLongBreakAccent
 
 @Composable
 fun TimerScreen(
@@ -65,6 +67,7 @@ fun TimerScreen(
             CircularProgressIndicator(
                 progress = { progress },
                 modifier = Modifier.size(220.dp),
+                color = progressColorFor(uiState.phase, MaterialTheme.colorScheme.primary, PomodoroLongBreakAccent),
                 strokeWidth = 8.dp
             )
             Text(
@@ -95,6 +98,9 @@ fun TimerScreen(
         }
     }
 }
+
+internal fun progressColorFor(phase: TimerPhase, primary: Color, longBreakAccent: Color): Color =
+    if (phase == TimerPhase.LONG_BREAK) longBreakAccent else primary
 
 private fun phaseLabel(phase: TimerPhase): String = when (phase) {
     TimerPhase.FOCUS -> "집중"

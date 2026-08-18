@@ -25,6 +25,7 @@ import androidx.wear.compose.material.CircularProgressIndicator
 import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.Text
 import com.pomodoro.timer.core.TimerPhase
+import com.pomodoro.timer.wear.theme.PomodoroWearLongBreakAccent
 
 @Composable
 fun WearTimerScreen(
@@ -68,7 +69,8 @@ fun WearTimerScreen(
         Box(contentAlignment = Alignment.Center) {
             CircularProgressIndicator(
                 progress = progress,
-                modifier = Modifier.size(120.dp)
+                modifier = Modifier.size(120.dp),
+                indicatorColor = progressColorFor(uiState.phase, MaterialTheme.colors.primary, PomodoroWearLongBreakAccent)
             )
             Text(text = remainingText, style = MaterialTheme.typography.title2)
         }
@@ -90,6 +92,9 @@ fun WearTimerScreen(
         }
     }
 }
+
+internal fun progressColorFor(phase: TimerPhase, primary: Color, longBreakAccent: Color): Color =
+    if (phase == TimerPhase.LONG_BREAK) longBreakAccent else primary
 
 private fun phaseLabel(phase: TimerPhase): String = when (phase) {
     TimerPhase.FOCUS -> "집중"

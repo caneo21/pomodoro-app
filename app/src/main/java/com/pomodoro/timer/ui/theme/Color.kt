@@ -5,3 +5,4 @@ import androidx.compose.ui.graphics.Color
 val PomodoroPrimary = Color(0xFFE85D4A)
 val PomodoroBackground = Color(0xFFFFFBF7)
 val PomodoroOnPrimary = Color(0xFFFFFFFF)
+val PomodoroLongBreakAccent = Color(0xFF5C6BC0)
