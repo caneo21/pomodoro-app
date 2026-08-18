@@ -1,6 +1,7 @@
 package com.pomodoro.timer.ui.screens
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -33,6 +35,10 @@ fun SettingsScreen(
     onBreakMinutesChange: (Int) -> Unit,
     onLongBreakMinutesChange: (Int) -> Unit = {},
     onPomodorosUntilLongBreakChange: (Int) -> Unit = {},
+    autoStartBreak: Boolean = false,
+    autoStartFocus: Boolean = false,
+    onAutoStartBreakChange: (Boolean) -> Unit = {},
+    onAutoStartFocusChange: (Boolean) -> Unit = {},
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -95,6 +101,26 @@ fun SettingsScreen(
             steps = TimerDefaults.MAX_POMODOROS_UNTIL_LONG_BREAK - TimerDefaults.MIN_POMODOROS_UNTIL_LONG_BREAK - 1,
             modifier = Modifier.testTag("pomodorosUntilLongBreakSlider")
         )
+
+        Spacer(Modifier.height(24.dp))
+        Row {
+            Text("자동으로 휴식 시작", modifier = Modifier.testTag("autoStartBreakLabel"))
+            Switch(
+                checked = autoStartBreak,
+                onCheckedChange = onAutoStartBreakChange,
+                modifier = Modifier.testTag("autoStartBreakSwitch")
+            )
+        }
+
+        Spacer(Modifier.height(16.dp))
+        Row {
+            Text("자동으로 다음 뽀모도로 시작", modifier = Modifier.testTag("autoStartFocusLabel"))
+            Switch(
+                checked = autoStartFocus,
+                onCheckedChange = onAutoStartFocusChange,
+                modifier = Modifier.testTag("autoStartFocusSwitch")
+            )
+        }
 
         Spacer(Modifier.height(24.dp))
         Button(onClick = onBack, modifier = Modifier.testTag("backButton")) {

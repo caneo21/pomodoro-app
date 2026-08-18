@@ -71,4 +71,31 @@ class SettingsScreenTest {
         composeRule.onNodeWithTag("longBreakSlider").assertExists()
         composeRule.onNodeWithTag("pomodorosUntilLongBreakSlider").assertExists()
     }
+
+    @Test
+    fun autoStartSwitches_areDisplayed_andInvokeCallbacks() {
+        var breakToggled: Boolean? = null
+        var focusToggled: Boolean? = null
+        composeRule.setContent {
+            PomodoroTheme {
+                SettingsScreen(
+                    focusMinutes = 25,
+                    breakMinutes = 5,
+                    autoStartBreak = false,
+                    autoStartFocus = false,
+                    onFocusMinutesChange = {},
+                    onBreakMinutesChange = {},
+                    onAutoStartBreakChange = { breakToggled = it },
+                    onAutoStartFocusChange = { focusToggled = it },
+                    onBack = {}
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("autoStartBreakSwitch").performClick()
+        composeRule.onNodeWithTag("autoStartFocusSwitch").performClick()
+
+        assertTrue(breakToggled == true)
+        assertTrue(focusToggled == true)
+    }
 }
