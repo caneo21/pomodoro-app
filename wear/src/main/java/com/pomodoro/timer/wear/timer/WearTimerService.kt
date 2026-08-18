@@ -70,6 +70,13 @@ class WearTimerService : Service() {
         // only consumer, and it needs to observe changes as they arrive from the phone.
         private val _pomodorosUntilLongBreak = MutableStateFlow(TimerDefaults.DEFAULT_POMODOROS_UNTIL_LONG_BREAK)
         val pomodorosUntilLongBreak: StateFlow<Int> = _pomodorosUntilLongBreak.asStateFlow()
+
+        // Not exposed publicly: nothing in :wear's UI reads these back out. They exist purely to
+        // echo the phone's last-known settings when the watch itself publishes a local state
+        // change, since TimerEngine doesn't expose these as getters (TimerState intentionally
+        // carries only phase/timing/count, not settings).
+        private val _autoStartBreak = MutableStateFlow(false)
+        private val _autoStartFocus = MutableStateFlow(false)
     }
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -95,6 +102,8 @@ class WearTimerService : Service() {
         breakMinutes = payload.breakMinutes
         longBreakMinutes = payload.longBreakMinutes
         _pomodorosUntilLongBreak.value = payload.pomodorosUntilLongBreak
+        _autoStartBreak.value = payload.autoStartBreak
+        _autoStartFocus.value = payload.autoStartFocus
         _state.value = engine.adoptRemote(payload, System.currentTimeMillis())
         if (_state.value.isRunning) startTicker() else stopTicker()
         updateOngoingNotification(_state.value)
@@ -151,7 +160,9 @@ class WearTimerService : Service() {
                 lastActionAtMillis = actionAtMillis,
                 longBreakMinutes = longBreakMinutes,
                 pomodorosUntilLongBreak = _pomodorosUntilLongBreak.value,
-                completedPomodoros = state.completedPomodoros
+                completedPomodoros = state.completedPomodoros,
+                autoStartBreak = _autoStartBreak.value,
+                autoStartFocus = _autoStartFocus.value
             )
         )
     }
@@ -196,6 +207,10 @@ class WearTimerService : Service() {
                     onLocalStateChanged(newState, System.currentTimeMillis())
                 }
                 updateOngoingNotification(newState)
+                if (!newState.isRunning) {
+                    tickerJob = null
+                    return@launch
+                }
             }
         }
     }
