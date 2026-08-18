@@ -14,7 +14,9 @@ data class TimerUiState(
     val breakMinutes: Int = TimerDefaults.DEFAULT_BREAK_MINUTES,
     val longBreakMinutes: Int = TimerDefaults.DEFAULT_LONG_BREAK_MINUTES,
     val completedPomodoros: Int = 0,
-    val pomodorosUntilLongBreak: Int = TimerDefaults.DEFAULT_POMODOROS_UNTIL_LONG_BREAK
+    val pomodorosUntilLongBreak: Int = TimerDefaults.DEFAULT_POMODOROS_UNTIL_LONG_BREAK,
+    val autoStartBreak: Boolean = false,
+    val autoStartFocus: Boolean = false
 )
 
 fun buildUiState(timer: TimerState, settings: TimerSettings): TimerUiState = TimerUiState(
@@ -26,5 +28,7 @@ fun buildUiState(timer: TimerState, settings: TimerSettings): TimerUiState = Tim
     breakMinutes = settings.breakMinutes,
     longBreakMinutes = settings.longBreakMinutes,
     completedPomodoros = timer.completedPomodoros,
-    pomodorosUntilLongBreak = settings.pomodorosUntilLongBreak
+    pomodorosUntilLongBreak = settings.pomodorosUntilLongBreak,
+    autoStartBreak = settings.autoStartBreak,
+    autoStartFocus = settings.autoStartFocus
 )

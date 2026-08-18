@@ -51,4 +51,15 @@ class TimerUiStateTest {
         assertEquals(4, uiState.completedPomodoros)
         assertEquals(4, uiState.pomodorosUntilLongBreak)
     }
+
+    @Test
+    fun `buildUiState carries autostart settings through`() {
+        val timer = TimerState(phase = TimerPhase.FOCUS, isRunning = false, remainingMillis = 1_500_000L, totalMillis = 1_500_000L)
+        val settings = TimerSettings(focusMinutes = 25, breakMinutes = 5, autoStartBreak = true, autoStartFocus = false)
+
+        val uiState = buildUiState(timer, settings)
+
+        assertEquals(true, uiState.autoStartBreak)
+        assertEquals(false, uiState.autoStartFocus)
+    }
 }
