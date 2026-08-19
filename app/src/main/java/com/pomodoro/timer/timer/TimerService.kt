@@ -34,6 +34,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class TimerService : Service() {
@@ -97,6 +98,7 @@ class TimerService : Service() {
         super.onCreate()
         createNotificationChannels()
         settingsRepository = TimerSettingsRepository(applicationContext.dataStore)
+        serviceScope.launch { dailyGoalProgress = settingsRepository.dailyGoalProgress.first() }
         val transport = PlayServicesSyncTransport(applicationContext)
         syncCoordinator = SyncCoordinator(
             transport = transport,
@@ -115,8 +117,10 @@ class TimerService : Service() {
         autoStartFocus = payload.autoStartFocus
         dailyGoalEnabled = payload.dailyGoalEnabled
         dailyGoalTarget = payload.dailyGoalTarget
-        dailyGoalProgress = DailyGoalProgress(payload.dailyGoalDate, payload.dailyGoalCount)
-        serviceScope.launch { settingsRepository.setDailyGoalProgress(payload.dailyGoalDate, payload.dailyGoalCount) }
+        if (payload.dailyGoalDate.isNotEmpty()) {
+            dailyGoalProgress = DailyGoalProgress(payload.dailyGoalDate, payload.dailyGoalCount)
+            serviceScope.launch { settingsRepository.setDailyGoalProgress(payload.dailyGoalDate, payload.dailyGoalCount) }
+        }
         _state.value = engine.adoptRemote(payload, System.currentTimeMillis())
         if (_state.value.isRunning) startTicker() else stopTicker()
         updateOngoingNotification(_state.value)
