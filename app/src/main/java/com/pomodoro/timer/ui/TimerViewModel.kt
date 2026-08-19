@@ -70,6 +70,14 @@ class TimerViewModel(
         viewModelScope.launch { settingsRepository.updateKeepScreenOn(enabled) }
     }
 
+    fun updateDailyGoalEnabled(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.updateDailyGoalEnabled(enabled) }
+    }
+
+    fun updateDailyGoalTarget(target: Int) {
+        viewModelScope.launch { settingsRepository.updateDailyGoalTarget(target) }
+    }
+
     class Factory(private val appContext: Context) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -87,6 +95,8 @@ class TimerViewModel(
                     .putExtra(TimerService.EXTRA_POMODOROS_UNTIL_LONG_BREAK, settings.pomodorosUntilLongBreak)
                     .putExtra(TimerService.EXTRA_AUTO_START_BREAK, settings.autoStartBreak)
                     .putExtra(TimerService.EXTRA_AUTO_START_FOCUS, settings.autoStartFocus)
+                    .putExtra(TimerService.EXTRA_DAILY_GOAL_ENABLED, settings.dailyGoalEnabled)
+                    .putExtra(TimerService.EXTRA_DAILY_GOAL_TARGET, settings.dailyGoalTarget)
                 ContextCompat.startForegroundService(appContext, intent)
             }
             return TimerViewModel(TimerService.state, repository, onCommand, onUpdateDurations) as T
