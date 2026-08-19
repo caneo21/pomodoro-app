@@ -41,6 +41,10 @@ class PlayServicesSyncTransport(context: Context) : SyncTransport {
             dataMap.putInt(SyncKeys.KEY_COMPLETED_POMODOROS, payload.completedPomodoros)
             dataMap.putBoolean(SyncKeys.KEY_AUTO_START_BREAK, payload.autoStartBreak)
             dataMap.putBoolean(SyncKeys.KEY_AUTO_START_FOCUS, payload.autoStartFocus)
+            dataMap.putBoolean(SyncKeys.KEY_DAILY_GOAL_ENABLED, payload.dailyGoalEnabled)
+            dataMap.putInt(SyncKeys.KEY_DAILY_GOAL_TARGET, payload.dailyGoalTarget)
+            dataMap.putInt(SyncKeys.KEY_DAILY_GOAL_COUNT, payload.dailyGoalCount)
+            dataMap.putString(SyncKeys.KEY_DAILY_GOAL_DATE, payload.dailyGoalDate)
         }.asPutDataRequest().setUrgent()
         dataClient.putDataItem(request).await()
     }
@@ -95,6 +99,10 @@ class PlayServicesSyncTransport(context: Context) : SyncTransport {
         ),
         completedPomodoros = map.getInt(SyncKeys.KEY_COMPLETED_POMODOROS),
         autoStartBreak = map.getBoolean(SyncKeys.KEY_AUTO_START_BREAK, false),
-        autoStartFocus = map.getBoolean(SyncKeys.KEY_AUTO_START_FOCUS, false)
+        autoStartFocus = map.getBoolean(SyncKeys.KEY_AUTO_START_FOCUS, false),
+        dailyGoalEnabled = map.getBoolean(SyncKeys.KEY_DAILY_GOAL_ENABLED, false),
+        dailyGoalTarget = map.getInt(SyncKeys.KEY_DAILY_GOAL_TARGET, TimerDefaults.DEFAULT_DAILY_GOAL_TARGET),
+        dailyGoalCount = map.getInt(SyncKeys.KEY_DAILY_GOAL_COUNT, 0),
+        dailyGoalDate = map.getString(SyncKeys.KEY_DAILY_GOAL_DATE, "")
     )
 }
