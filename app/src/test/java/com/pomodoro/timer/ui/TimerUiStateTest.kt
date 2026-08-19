@@ -72,4 +72,15 @@ class TimerUiStateTest {
 
         assertEquals(true, uiState.keepScreenOn)
     }
+
+    @Test
+    fun `buildUiState carries dailyGoalEnabled and dailyGoalTarget through`() {
+        val timer = TimerState(phase = TimerPhase.FOCUS, isRunning = false, remainingMillis = 1_500_000L, totalMillis = 1_500_000L)
+        val settings = TimerSettings(focusMinutes = 25, breakMinutes = 5, dailyGoalEnabled = true, dailyGoalTarget = 12)
+
+        val uiState = buildUiState(timer, settings)
+
+        assertEquals(true, uiState.dailyGoalEnabled)
+        assertEquals(12, uiState.dailyGoalTarget)
+    }
 }

@@ -17,7 +17,9 @@ data class TimerUiState(
     val pomodorosUntilLongBreak: Int = TimerDefaults.DEFAULT_POMODOROS_UNTIL_LONG_BREAK,
     val autoStartBreak: Boolean = false,
     val autoStartFocus: Boolean = false,
-    val keepScreenOn: Boolean = false
+    val keepScreenOn: Boolean = false,
+    val dailyGoalEnabled: Boolean = false,
+    val dailyGoalTarget: Int = TimerDefaults.DEFAULT_DAILY_GOAL_TARGET
 )
 
 fun buildUiState(timer: TimerState, settings: TimerSettings): TimerUiState = TimerUiState(
@@ -32,5 +34,7 @@ fun buildUiState(timer: TimerState, settings: TimerSettings): TimerUiState = Tim
     pomodorosUntilLongBreak = settings.pomodorosUntilLongBreak,
     autoStartBreak = settings.autoStartBreak,
     autoStartFocus = settings.autoStartFocus,
-    keepScreenOn = settings.keepScreenOn
+    keepScreenOn = settings.keepScreenOn,
+    dailyGoalEnabled = settings.dailyGoalEnabled,
+    dailyGoalTarget = settings.dailyGoalTarget
 )
