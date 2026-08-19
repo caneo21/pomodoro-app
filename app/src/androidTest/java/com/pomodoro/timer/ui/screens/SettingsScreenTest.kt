@@ -124,4 +124,32 @@ class SettingsScreenTest {
 
         assertTrue(keepScreenOnToggled == true)
     }
+
+    @Test
+    fun dailyGoalControls_areDisplayed_andInvokeCallbacks() {
+        var enabledToggled: Boolean? = null
+        var targetChanged: Int? = null
+        composeRule.setContent {
+            PomodoroTheme {
+                SettingsScreen(
+                    focusMinutes = 25,
+                    breakMinutes = 5,
+                    dailyGoalEnabled = false,
+                    dailyGoalTarget = 8,
+                    onFocusMinutesChange = {},
+                    onBreakMinutesChange = {},
+                    onDailyGoalEnabledChange = { enabledToggled = it },
+                    onDailyGoalTargetChange = { targetChanged = it },
+                    onBack = {}
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("dailyGoalEnabledLabel").assertExists()
+        composeRule.onNodeWithTag("dailyGoalTargetSlider").assertExists()
+
+        composeRule.onNodeWithTag("dailyGoalEnabledSwitch").performClick()
+
+        assertTrue(enabledToggled == true)
+    }
 }

@@ -46,6 +46,10 @@ fun SettingsScreen(
     onAutoStartFocusChange: (Boolean) -> Unit = {},
     keepScreenOn: Boolean = false,
     onKeepScreenOnChange: (Boolean) -> Unit = {},
+    dailyGoalEnabled: Boolean = false,
+    dailyGoalTarget: Int = TimerDefaults.DEFAULT_DAILY_GOAL_TARGET,
+    onDailyGoalEnabledChange: (Boolean) -> Unit = {},
+    onDailyGoalTargetChange: (Int) -> Unit = {},
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -56,6 +60,7 @@ fun SettingsScreen(
     var localPomodorosUntilLongBreak by remember(pomodorosUntilLongBreak) {
         mutableFloatStateOf(pomodorosUntilLongBreak.toFloat())
     }
+    var localDailyGoalTarget by remember(dailyGoalTarget) { mutableFloatStateOf(dailyGoalTarget.toFloat()) }
 
     Column(
         modifier = modifier
@@ -160,6 +165,34 @@ fun SettingsScreen(
                 modifier = Modifier.testTag("keepScreenOnSwitch")
             )
         }
+
+        Spacer(Modifier.height(16.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "일일 목표 사용",
+                modifier = Modifier.weight(1f).testTag("dailyGoalEnabledLabel")
+            )
+            Switch(
+                checked = dailyGoalEnabled,
+                onCheckedChange = onDailyGoalEnabledChange,
+                modifier = Modifier.testTag("dailyGoalEnabledSwitch")
+            )
+        }
+
+        Spacer(Modifier.height(24.dp))
+        Text("일일 목표: ${localDailyGoalTarget.roundToInt()}개")
+        Slider(
+            value = localDailyGoalTarget,
+            onValueChange = { localDailyGoalTarget = it },
+            onValueChangeFinished = { onDailyGoalTargetChange(localDailyGoalTarget.roundToInt()) },
+            valueRange = TimerDefaults.MIN_DAILY_GOAL_TARGET.toFloat()..TimerDefaults.MAX_DAILY_GOAL_TARGET.toFloat(),
+            steps = TimerDefaults.MAX_DAILY_GOAL_TARGET - TimerDefaults.MIN_DAILY_GOAL_TARGET - 1,
+            modifier = Modifier.testTag("dailyGoalTargetSlider")
+        )
 
         Spacer(Modifier.height(24.dp))
         Button(onClick = onBack, modifier = Modifier.testTag("backButton")) {

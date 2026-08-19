@@ -46,6 +46,10 @@ fun PomodoroApp(viewModel: TimerViewModel) {
                 onAutoStartFocusChange = viewModel::updateAutoStartFocus,
                 keepScreenOn = uiState.keepScreenOn,
                 onKeepScreenOnChange = viewModel::updateKeepScreenOn,
+                dailyGoalEnabled = uiState.dailyGoalEnabled,
+                dailyGoalTarget = uiState.dailyGoalTarget,
+                onDailyGoalEnabledChange = viewModel::updateDailyGoalEnabled,
+                onDailyGoalTargetChange = viewModel::updateDailyGoalTarget,
                 onBack = { navController.popBackStack() }
             )
         }
