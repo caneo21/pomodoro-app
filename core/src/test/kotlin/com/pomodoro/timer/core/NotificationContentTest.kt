@@ -25,4 +25,10 @@ class NotificationContentTest {
         assertEquals("긴 휴식 시간입니다!", NotificationContent.sessionEndTitle(TimerPhase.LONG_BREAK))
         assertEquals("다시 집중할 시간입니다!", NotificationContent.sessionEndTitle(TimerPhase.FOCUS))
     }
+
+    @Test
+    fun `daily goal reached title includes the target count`() {
+        assertEquals("오늘의 목표 8개를 달성했어요!", NotificationContent.dailyGoalReachedTitle(8))
+        assertEquals("오늘의 목표 1개를 달성했어요!", NotificationContent.dailyGoalReachedTitle(1))
+    }
 }

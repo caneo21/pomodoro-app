@@ -20,4 +20,6 @@ object NotificationContent {
         TimerPhase.LONG_BREAK -> "긴 휴식 시간입니다!"
         TimerPhase.FOCUS -> "다시 집중할 시간입니다!"
     }
+
+    fun dailyGoalReachedTitle(target: Int): String = "오늘의 목표 ${target}개를 달성했어요!"
 }

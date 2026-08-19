@@ -15,4 +15,8 @@ object SyncKeys {
     const val KEY_COMPLETED_POMODOROS = "completedPomodoros"
     const val KEY_AUTO_START_BREAK = "autoStartBreak"
     const val KEY_AUTO_START_FOCUS = "autoStartFocus"
+    const val KEY_DAILY_GOAL_ENABLED = "dailyGoalEnabled"
+    const val KEY_DAILY_GOAL_TARGET = "dailyGoalTarget"
+    const val KEY_DAILY_GOAL_COUNT = "dailyGoalCount"
+    const val KEY_DAILY_GOAL_DATE = "dailyGoalDate"
 }

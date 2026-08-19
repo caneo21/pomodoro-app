@@ -19,5 +19,9 @@ data class SyncPayload(
     val pomodorosUntilLongBreak: Int = TimerDefaults.DEFAULT_POMODOROS_UNTIL_LONG_BREAK,
     val completedPomodoros: Int = 0,
     val autoStartBreak: Boolean = false,
-    val autoStartFocus: Boolean = false
+    val autoStartFocus: Boolean = false,
+    val dailyGoalEnabled: Boolean = false,
+    val dailyGoalTarget: Int = TimerDefaults.DEFAULT_DAILY_GOAL_TARGET,
+    val dailyGoalCount: Int = 0,
+    val dailyGoalDate: String = ""
 )

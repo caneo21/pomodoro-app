@@ -13,4 +13,7 @@ object TimerDefaults {
     const val DEFAULT_POMODOROS_UNTIL_LONG_BREAK = 4
     const val MIN_POMODOROS_UNTIL_LONG_BREAK = 2
     const val MAX_POMODOROS_UNTIL_LONG_BREAK = 8
+    const val DEFAULT_DAILY_GOAL_TARGET = 8
+    const val MIN_DAILY_GOAL_TARGET = 1
+    const val MAX_DAILY_GOAL_TARGET = 20
 }
