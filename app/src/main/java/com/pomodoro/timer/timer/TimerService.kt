@@ -12,6 +12,8 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.pomodoro.timer.MainActivity
+import com.pomodoro.timer.core.DailyGoalProgress
+import com.pomodoro.timer.core.DailyGoalTracker
 import com.pomodoro.timer.core.NotificationContent
 import com.pomodoro.timer.core.TimerDefaults
 import com.pomodoro.timer.core.TimerEngine
@@ -19,7 +21,10 @@ import com.pomodoro.timer.core.TimerPhase
 import com.pomodoro.timer.core.TimerState
 import com.pomodoro.timer.core.SyncCoordinator
 import com.pomodoro.timer.core.SyncPayload
+import com.pomodoro.timer.settings.TimerSettingsRepository
+import com.pomodoro.timer.settings.dataStore
 import com.pomodoro.timer.sync.PlayServicesSyncTransport
+import java.time.LocalDate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -44,11 +49,14 @@ class TimerService : Service() {
         const val EXTRA_POMODOROS_UNTIL_LONG_BREAK = "extra_pomodoros_until_long_break"
         const val EXTRA_AUTO_START_BREAK = "extra_auto_start_break"
         const val EXTRA_AUTO_START_FOCUS = "extra_auto_start_focus"
+        const val EXTRA_DAILY_GOAL_ENABLED = "extra_daily_goal_enabled"
+        const val EXTRA_DAILY_GOAL_TARGET = "extra_daily_goal_target"
 
         private const val CHANNEL_ID = "pomodoro_timer_channel"
         private const val SESSION_END_CHANNEL_ID = "pomodoro_session_end_channel"
         private const val ONGOING_NOTIFICATION_ID = 1
         private const val SESSION_END_NOTIFICATION_ID = 2
+        private const val DAILY_GOAL_NOTIFICATION_ID = 3
         private const val TICK_INTERVAL_MILLIS = 1_000L
 
         private val defaultFocusMillis = TimerDefaults.DEFAULT_FOCUS_MINUTES * 60_000L
@@ -73,17 +81,22 @@ class TimerService : Service() {
         private var pomodorosUntilLongBreak: Int = TimerDefaults.DEFAULT_POMODOROS_UNTIL_LONG_BREAK
         private var autoStartBreak: Boolean = false
         private var autoStartFocus: Boolean = false
+        private var dailyGoalEnabled: Boolean = false
+        private var dailyGoalTarget: Int = TimerDefaults.DEFAULT_DAILY_GOAL_TARGET
+        private var dailyGoalProgress: DailyGoalProgress = DailyGoalProgress("", 0)
     }
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var tickerJob: Job? = null
     private lateinit var syncCoordinator: SyncCoordinator
+    private lateinit var settingsRepository: TimerSettingsRepository
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannels()
+        settingsRepository = TimerSettingsRepository(applicationContext.dataStore)
         val transport = PlayServicesSyncTransport(applicationContext)
         syncCoordinator = SyncCoordinator(
             transport = transport,
@@ -100,6 +113,10 @@ class TimerService : Service() {
         pomodorosUntilLongBreak = payload.pomodorosUntilLongBreak
         autoStartBreak = payload.autoStartBreak
         autoStartFocus = payload.autoStartFocus
+        dailyGoalEnabled = payload.dailyGoalEnabled
+        dailyGoalTarget = payload.dailyGoalTarget
+        dailyGoalProgress = DailyGoalProgress(payload.dailyGoalDate, payload.dailyGoalCount)
+        serviceScope.launch { settingsRepository.setDailyGoalProgress(payload.dailyGoalDate, payload.dailyGoalCount) }
         _state.value = engine.adoptRemote(payload, System.currentTimeMillis())
         if (_state.value.isRunning) startTicker() else stopTicker()
         updateOngoingNotification(_state.value)
@@ -119,7 +136,11 @@ class TimerService : Service() {
                 pomodorosUntilLongBreak = pomodorosUntilLongBreak,
                 completedPomodoros = state.completedPomodoros,
                 autoStartBreak = autoStartBreak,
-                autoStartFocus = autoStartFocus
+                autoStartFocus = autoStartFocus,
+                dailyGoalEnabled = dailyGoalEnabled,
+                dailyGoalTarget = dailyGoalTarget,
+                dailyGoalCount = dailyGoalProgress.count,
+                dailyGoalDate = dailyGoalProgress.date
             )
         )
     }
@@ -172,6 +193,8 @@ class TimerService : Service() {
                 )
                 autoStartBreak = intent.getBooleanExtra(EXTRA_AUTO_START_BREAK, false)
                 autoStartFocus = intent.getBooleanExtra(EXTRA_AUTO_START_FOCUS, false)
+                dailyGoalEnabled = intent.getBooleanExtra(EXTRA_DAILY_GOAL_ENABLED, false)
+                dailyGoalTarget = intent.getIntExtra(EXTRA_DAILY_GOAL_TARGET, TimerDefaults.DEFAULT_DAILY_GOAL_TARGET)
                 engine.updateDurations(
                     focusMinutes * 60_000L,
                     breakMinutes * 60_000L,
@@ -202,7 +225,19 @@ class TimerService : Service() {
                 _state.value = newState
                 if (newState.phase != previousPhase) {
                     showSessionEndNotification(newState.phase)
-                    publishSyncState(newState, System.currentTimeMillis())
+                    if (previousPhase == TimerPhase.FOCUS) {
+                        val today = LocalDate.now().toString()
+                        serviceScope.launch {
+                            val (previous, updated) = settingsRepository.recordDailyGoalCompletion(today)
+                            dailyGoalProgress = updated
+                            if (dailyGoalEnabled && DailyGoalTracker.justReachedGoal(previous.count, updated.count, dailyGoalTarget)) {
+                                showDailyGoalReachedNotification(dailyGoalTarget)
+                            }
+                            publishSyncState(newState, System.currentTimeMillis())
+                        }
+                    } else {
+                        publishSyncState(newState, System.currentTimeMillis())
+                    }
                 }
                 updateOngoingNotification(newState)
                 if (!newState.isRunning) {
@@ -285,6 +320,18 @@ class TimerService : Service() {
             .setContentIntent(contentIntent())
             .build()
         getSystemService(NotificationManager::class.java).notify(SESSION_END_NOTIFICATION_ID, notification)
+    }
+
+    private fun showDailyGoalReachedNotification(target: Int) {
+        val notification = NotificationCompat.Builder(this, SESSION_END_CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_popup_reminder)
+            .setContentTitle(NotificationContent.dailyGoalReachedTitle(target))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setDefaults(NotificationCompat.DEFAULT_SOUND or NotificationCompat.DEFAULT_VIBRATE)
+            .setAutoCancel(true)
+            .setContentIntent(contentIntent())
+            .build()
+        getSystemService(NotificationManager::class.java).notify(DAILY_GOAL_NOTIFICATION_ID, notification)
     }
 
     override fun onDestroy() {
