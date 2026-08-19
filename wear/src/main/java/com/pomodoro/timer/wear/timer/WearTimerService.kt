@@ -13,14 +13,18 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.wear.ongoing.OngoingActivity
 import androidx.wear.ongoing.Status
+import com.pomodoro.timer.core.DailyGoalProgress
+import com.pomodoro.timer.core.DailyGoalTracker
 import com.pomodoro.timer.core.NotificationContent
 import com.pomodoro.timer.core.SyncCoordinator
 import com.pomodoro.timer.core.SyncPayload
 import com.pomodoro.timer.core.TimerDefaults
 import com.pomodoro.timer.core.TimerEngine
+import com.pomodoro.timer.core.TimerPhase
 import com.pomodoro.timer.core.TimerState
 import com.pomodoro.timer.wear.MainActivity
 import com.pomodoro.timer.wear.sync.WearPlayServicesSyncTransport
+import java.time.LocalDate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -41,6 +45,7 @@ class WearTimerService : Service() {
 
         const val ONGOING_NOTIFICATION_ID = 1
         private const val SESSION_END_NOTIFICATION_ID = 2
+        private const val DAILY_GOAL_NOTIFICATION_ID = 3
         private const val CHANNEL_ID = "pomodoro_wear_timer_channel"
         private const val SESSION_END_CHANNEL_ID = "pomodoro_wear_session_end_channel"
         private const val TICK_INTERVAL_MILLIS = 1_000L
@@ -77,6 +82,16 @@ class WearTimerService : Service() {
         // carries only phase/timing/count, not settings).
         private val _autoStartBreak = MutableStateFlow(false)
         private val _autoStartFocus = MutableStateFlow(false)
+
+        // Same "not exposed" reasoning as _autoStartBreak/_autoStartFocus above: nothing in
+        // :wear's UI reads these back out in this iteration.
+        private val _dailyGoalEnabled = MutableStateFlow(false)
+        private val _dailyGoalTarget = MutableStateFlow(TimerDefaults.DEFAULT_DAILY_GOAL_TARGET)
+
+        // Plain var, not a repository-backed value: the watch has no local settings persistence
+        // (existing constraint), so this is hydrated purely from sync and resets to zero on a
+        // fresh install or process restart, same cold-start gap every other watch setting has.
+        private var dailyGoalProgress: DailyGoalProgress = DailyGoalProgress("", 0)
     }
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -104,6 +119,9 @@ class WearTimerService : Service() {
         _pomodorosUntilLongBreak.value = payload.pomodorosUntilLongBreak
         _autoStartBreak.value = payload.autoStartBreak
         _autoStartFocus.value = payload.autoStartFocus
+        _dailyGoalEnabled.value = payload.dailyGoalEnabled
+        _dailyGoalTarget.value = payload.dailyGoalTarget
+        dailyGoalProgress = DailyGoalProgress(payload.dailyGoalDate, payload.dailyGoalCount)
         _state.value = engine.adoptRemote(payload, System.currentTimeMillis())
         if (_state.value.isRunning) startTicker() else stopTicker()
         updateOngoingNotification(_state.value)
@@ -162,7 +180,11 @@ class WearTimerService : Service() {
                 pomodorosUntilLongBreak = _pomodorosUntilLongBreak.value,
                 completedPomodoros = state.completedPomodoros,
                 autoStartBreak = _autoStartBreak.value,
-                autoStartFocus = _autoStartFocus.value
+                autoStartFocus = _autoStartFocus.value,
+                dailyGoalEnabled = _dailyGoalEnabled.value,
+                dailyGoalTarget = _dailyGoalTarget.value,
+                dailyGoalCount = dailyGoalProgress.count,
+                dailyGoalDate = dailyGoalProgress.date
             )
         )
     }
@@ -204,6 +226,17 @@ class WearTimerService : Service() {
                 _state.value = newState
                 if (newState.phase != previousPhase) {
                     onSessionEnded(newState)
+                    if (previousPhase == TimerPhase.FOCUS) {
+                        val today = LocalDate.now().toString()
+                        val previous = DailyGoalTracker.forToday(dailyGoalProgress, today)
+                        val updated = DailyGoalTracker.recordCompletion(dailyGoalProgress, today)
+                        dailyGoalProgress = updated
+                        if (_dailyGoalEnabled.value &&
+                            DailyGoalTracker.justReachedGoal(previous.count, updated.count, _dailyGoalTarget.value)
+                        ) {
+                            showDailyGoalReachedNotification(_dailyGoalTarget.value)
+                        }
+                    }
                     onLocalStateChanged(newState, System.currentTimeMillis())
                 }
                 updateOngoingNotification(newState)
@@ -225,6 +258,18 @@ class WearTimerService : Service() {
             .setContentIntent(contentIntent())
             .build()
         getSystemService(NotificationManager::class.java).notify(SESSION_END_NOTIFICATION_ID, notification)
+    }
+
+    private fun showDailyGoalReachedNotification(target: Int) {
+        val notification = NotificationCompat.Builder(this, SESSION_END_CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_popup_reminder)
+            .setContentTitle(NotificationContent.dailyGoalReachedTitle(target))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setDefaults(NotificationCompat.DEFAULT_SOUND or NotificationCompat.DEFAULT_VIBRATE)
+            .setAutoCancel(true)
+            .setContentIntent(contentIntent())
+            .build()
+        getSystemService(NotificationManager::class.java).notify(DAILY_GOAL_NOTIFICATION_ID, notification)
     }
 
     private fun stopTicker() {
