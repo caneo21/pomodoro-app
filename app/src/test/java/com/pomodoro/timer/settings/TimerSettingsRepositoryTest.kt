@@ -3,6 +3,7 @@ package com.pomodoro.timer.settings
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import com.pomodoro.timer.core.DailyGoalProgress
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -138,5 +139,76 @@ class TimerSettingsRepositoryTest {
 
         repository.updateKeepScreenOn(false)
         assertEquals(false, repository.settings.first().keepScreenOn)
+    }
+
+    @Test
+    fun `settings default to daily goal disabled with target 8`() = runTest {
+        val repository = TimerSettingsRepository(newDataStore())
+
+        val settings = repository.settings.first()
+
+        assertEquals(false, settings.dailyGoalEnabled)
+        assertEquals(8, settings.dailyGoalTarget)
+    }
+
+    @Test
+    fun `updateDailyGoalEnabled and updateDailyGoalTarget persist and clamp to 1 to 20 range`() = runTest {
+        val repository = TimerSettingsRepository(newDataStore())
+
+        repository.updateDailyGoalEnabled(true)
+        assertEquals(true, repository.settings.first().dailyGoalEnabled)
+
+        repository.updateDailyGoalTarget(12)
+        assertEquals(12, repository.settings.first().dailyGoalTarget)
+
+        repository.updateDailyGoalTarget(99)
+        assertEquals(20, repository.settings.first().dailyGoalTarget)
+
+        repository.updateDailyGoalTarget(0)
+        assertEquals(1, repository.settings.first().dailyGoalTarget)
+    }
+
+    @Test
+    fun `dailyGoalProgress defaults to an empty date and zero count`() = runTest {
+        val repository = TimerSettingsRepository(newDataStore())
+
+        val progress = repository.dailyGoalProgress.first()
+
+        assertEquals("", progress.date)
+        assertEquals(0, progress.count)
+    }
+
+    @Test
+    fun `recordDailyGoalCompletion increments within the same day and persists`() = runTest {
+        val repository = TimerSettingsRepository(newDataStore())
+        repository.setDailyGoalProgress("2026-08-19", 3)
+
+        val result = repository.recordDailyGoalCompletion("2026-08-19")
+
+        assertEquals(DailyGoalProgress("2026-08-19", 3), result.previous)
+        assertEquals(DailyGoalProgress("2026-08-19", 4), result.updated)
+        assertEquals(DailyGoalProgress("2026-08-19", 4), repository.dailyGoalProgress.first())
+    }
+
+    @Test
+    fun `recordDailyGoalCompletion rolls over to today and restarts at 1 across a date change`() = runTest {
+        val repository = TimerSettingsRepository(newDataStore())
+        repository.setDailyGoalProgress("2026-08-18", 7)
+
+        val result = repository.recordDailyGoalCompletion("2026-08-19")
+
+        assertEquals(DailyGoalProgress("2026-08-19", 0), result.previous)
+        assertEquals(DailyGoalProgress("2026-08-19", 1), result.updated)
+        assertEquals(DailyGoalProgress("2026-08-19", 1), repository.dailyGoalProgress.first())
+    }
+
+    @Test
+    fun `setDailyGoalProgress overwrites both keys directly`() = runTest {
+        val repository = TimerSettingsRepository(newDataStore())
+        repository.recordDailyGoalCompletion("2026-08-19")
+
+        repository.setDailyGoalProgress("2026-08-20", 5)
+
+        assertEquals(DailyGoalProgress("2026-08-20", 5), repository.dailyGoalProgress.first())
     }
 }

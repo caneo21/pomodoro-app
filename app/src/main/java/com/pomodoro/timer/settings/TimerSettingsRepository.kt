@@ -5,9 +5,14 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
+import com.pomodoro.timer.core.DailyGoalProgress
+import com.pomodoro.timer.core.DailyGoalTracker
 import com.pomodoro.timer.core.TimerDefaults
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+
+data class DailyGoalCompletionResult(val previous: DailyGoalProgress, val updated: DailyGoalProgress)
 
 class TimerSettingsRepository(private val dataStore: DataStore<Preferences>) {
 
@@ -19,6 +24,10 @@ class TimerSettingsRepository(private val dataStore: DataStore<Preferences>) {
         val AUTO_START_BREAK_KEY = booleanPreferencesKey("auto_start_break")
         val AUTO_START_FOCUS_KEY = booleanPreferencesKey("auto_start_focus")
         val KEEP_SCREEN_ON_KEY = booleanPreferencesKey("keep_screen_on")
+        val DAILY_GOAL_ENABLED_KEY = booleanPreferencesKey("daily_goal_enabled")
+        val DAILY_GOAL_TARGET_KEY = intPreferencesKey("daily_goal_target")
+        val DAILY_GOAL_DATE_KEY = stringPreferencesKey("daily_goal_date")
+        val DAILY_GOAL_COUNT_KEY = intPreferencesKey("daily_goal_count")
         const val DEFAULT_FOCUS_MINUTES = TimerDefaults.DEFAULT_FOCUS_MINUTES
         const val DEFAULT_BREAK_MINUTES = TimerDefaults.DEFAULT_BREAK_MINUTES
         const val MIN_FOCUS_MINUTES = TimerDefaults.MIN_FOCUS_MINUTES
@@ -31,6 +40,9 @@ class TimerSettingsRepository(private val dataStore: DataStore<Preferences>) {
         const val DEFAULT_POMODOROS_UNTIL_LONG_BREAK = TimerDefaults.DEFAULT_POMODOROS_UNTIL_LONG_BREAK
         const val MIN_POMODOROS_UNTIL_LONG_BREAK = TimerDefaults.MIN_POMODOROS_UNTIL_LONG_BREAK
         const val MAX_POMODOROS_UNTIL_LONG_BREAK = TimerDefaults.MAX_POMODOROS_UNTIL_LONG_BREAK
+        const val DEFAULT_DAILY_GOAL_TARGET = TimerDefaults.DEFAULT_DAILY_GOAL_TARGET
+        const val MIN_DAILY_GOAL_TARGET = TimerDefaults.MIN_DAILY_GOAL_TARGET
+        const val MAX_DAILY_GOAL_TARGET = TimerDefaults.MAX_DAILY_GOAL_TARGET
     }
 
     val settings: Flow<TimerSettings> = dataStore.data.map { prefs ->
@@ -41,7 +53,9 @@ class TimerSettingsRepository(private val dataStore: DataStore<Preferences>) {
             pomodorosUntilLongBreak = prefs[POMODOROS_UNTIL_LONG_BREAK_KEY] ?: DEFAULT_POMODOROS_UNTIL_LONG_BREAK,
             autoStartBreak = prefs[AUTO_START_BREAK_KEY] ?: false,
             autoStartFocus = prefs[AUTO_START_FOCUS_KEY] ?: false,
-            keepScreenOn = prefs[KEEP_SCREEN_ON_KEY] ?: false
+            keepScreenOn = prefs[KEEP_SCREEN_ON_KEY] ?: false,
+            dailyGoalEnabled = prefs[DAILY_GOAL_ENABLED_KEY] ?: false,
+            dailyGoalTarget = prefs[DAILY_GOAL_TARGET_KEY] ?: DEFAULT_DAILY_GOAL_TARGET
         )
     }
 
@@ -73,5 +87,43 @@ class TimerSettingsRepository(private val dataStore: DataStore<Preferences>) {
 
     suspend fun updateKeepScreenOn(enabled: Boolean) {
         dataStore.edit { it[KEEP_SCREEN_ON_KEY] = enabled }
+    }
+
+    suspend fun updateDailyGoalEnabled(enabled: Boolean) {
+        dataStore.edit { it[DAILY_GOAL_ENABLED_KEY] = enabled }
+    }
+
+    suspend fun updateDailyGoalTarget(target: Int) {
+        dataStore.edit { it[DAILY_GOAL_TARGET_KEY] = target.coerceIn(MIN_DAILY_GOAL_TARGET, MAX_DAILY_GOAL_TARGET) }
+    }
+
+    val dailyGoalProgress: Flow<DailyGoalProgress> = dataStore.data.map { prefs ->
+        DailyGoalProgress(
+            date = prefs[DAILY_GOAL_DATE_KEY] ?: "",
+            count = prefs[DAILY_GOAL_COUNT_KEY] ?: 0
+        )
+    }
+
+    suspend fun recordDailyGoalCompletion(today: String): DailyGoalCompletionResult {
+        var previous = DailyGoalProgress(today, 0)
+        var updated = previous
+        dataStore.edit { prefs ->
+            val stored = DailyGoalProgress(
+                date = prefs[DAILY_GOAL_DATE_KEY] ?: "",
+                count = prefs[DAILY_GOAL_COUNT_KEY] ?: 0
+            )
+            previous = DailyGoalTracker.forToday(stored, today)
+            updated = DailyGoalTracker.recordCompletion(stored, today)
+            prefs[DAILY_GOAL_DATE_KEY] = updated.date
+            prefs[DAILY_GOAL_COUNT_KEY] = updated.count
+        }
+        return DailyGoalCompletionResult(previous, updated)
+    }
+
+    suspend fun setDailyGoalProgress(date: String, count: Int) {
+        dataStore.edit {
+            it[DAILY_GOAL_DATE_KEY] = date
+            it[DAILY_GOAL_COUNT_KEY] = count
+        }
     }
 }

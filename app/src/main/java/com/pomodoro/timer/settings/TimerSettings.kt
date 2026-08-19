@@ -9,5 +9,7 @@ data class TimerSettings(
     val pomodorosUntilLongBreak: Int = TimerDefaults.DEFAULT_POMODOROS_UNTIL_LONG_BREAK,
     val autoStartBreak: Boolean = false,
     val autoStartFocus: Boolean = false,
-    val keepScreenOn: Boolean = false
+    val keepScreenOn: Boolean = false,
+    val dailyGoalEnabled: Boolean = false,
+    val dailyGoalTarget: Int = TimerDefaults.DEFAULT_DAILY_GOAL_TARGET
 )
