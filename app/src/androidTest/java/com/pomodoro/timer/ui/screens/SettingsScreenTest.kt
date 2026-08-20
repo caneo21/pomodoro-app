@@ -3,6 +3,7 @@ package com.pomodoro.timer.ui.screens
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import com.pomodoro.timer.ui.theme.PomodoroTheme
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -180,9 +181,9 @@ class SettingsScreenTest {
         composeRule.onNodeWithTag("vibrationEnabledLabel").assertExists()
         composeRule.onNodeWithTag("useAlarmSoundLabel").assertExists()
 
-        composeRule.onNodeWithTag("notificationsEnabledSwitch").performClick()
-        composeRule.onNodeWithTag("vibrationEnabledSwitch").performClick()
-        composeRule.onNodeWithTag("useAlarmSoundSwitch").performClick()
+        composeRule.onNodeWithTag("notificationsEnabledSwitch").performScrollTo().performClick()
+        composeRule.onNodeWithTag("vibrationEnabledSwitch").performScrollTo().performClick()
+        composeRule.onNodeWithTag("useAlarmSoundSwitch").performScrollTo().performClick()
 
         assertTrue(notificationsToggled == false)
         assertTrue(vibrationToggled == false)
