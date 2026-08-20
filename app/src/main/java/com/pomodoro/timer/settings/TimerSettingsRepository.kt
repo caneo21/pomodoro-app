@@ -28,6 +28,9 @@ class TimerSettingsRepository(private val dataStore: DataStore<Preferences>) {
         val DAILY_GOAL_TARGET_KEY = intPreferencesKey("daily_goal_target")
         val DAILY_GOAL_DATE_KEY = stringPreferencesKey("daily_goal_date")
         val DAILY_GOAL_COUNT_KEY = intPreferencesKey("daily_goal_count")
+        val NOTIFICATIONS_ENABLED_KEY = booleanPreferencesKey("notifications_enabled")
+        val VIBRATION_ENABLED_KEY = booleanPreferencesKey("vibration_enabled")
+        val USE_ALARM_SOUND_KEY = booleanPreferencesKey("use_alarm_sound")
         const val DEFAULT_FOCUS_MINUTES = TimerDefaults.DEFAULT_FOCUS_MINUTES
         const val DEFAULT_BREAK_MINUTES = TimerDefaults.DEFAULT_BREAK_MINUTES
         const val MIN_FOCUS_MINUTES = TimerDefaults.MIN_FOCUS_MINUTES
@@ -55,7 +58,10 @@ class TimerSettingsRepository(private val dataStore: DataStore<Preferences>) {
             autoStartFocus = prefs[AUTO_START_FOCUS_KEY] ?: false,
             keepScreenOn = prefs[KEEP_SCREEN_ON_KEY] ?: false,
             dailyGoalEnabled = prefs[DAILY_GOAL_ENABLED_KEY] ?: false,
-            dailyGoalTarget = prefs[DAILY_GOAL_TARGET_KEY] ?: DEFAULT_DAILY_GOAL_TARGET
+            dailyGoalTarget = prefs[DAILY_GOAL_TARGET_KEY] ?: DEFAULT_DAILY_GOAL_TARGET,
+            notificationsEnabled = prefs[NOTIFICATIONS_ENABLED_KEY] ?: true,
+            vibrationEnabled = prefs[VIBRATION_ENABLED_KEY] ?: true,
+            useAlarmSound = prefs[USE_ALARM_SOUND_KEY] ?: false
         )
     }
 
@@ -95,6 +101,18 @@ class TimerSettingsRepository(private val dataStore: DataStore<Preferences>) {
 
     suspend fun updateDailyGoalTarget(target: Int) {
         dataStore.edit { it[DAILY_GOAL_TARGET_KEY] = target.coerceIn(MIN_DAILY_GOAL_TARGET, MAX_DAILY_GOAL_TARGET) }
+    }
+
+    suspend fun updateNotificationsEnabled(enabled: Boolean) {
+        dataStore.edit { it[NOTIFICATIONS_ENABLED_KEY] = enabled }
+    }
+
+    suspend fun updateVibrationEnabled(enabled: Boolean) {
+        dataStore.edit { it[VIBRATION_ENABLED_KEY] = enabled }
+    }
+
+    suspend fun updateUseAlarmSound(enabled: Boolean) {
+        dataStore.edit { it[USE_ALARM_SOUND_KEY] = enabled }
     }
 
     val dailyGoalProgress: Flow<DailyGoalProgress> = dataStore.data.map { prefs ->

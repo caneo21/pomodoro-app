@@ -31,4 +31,10 @@ class NotificationContentTest {
         assertEquals("오늘의 목표 8개를 달성했어요!", NotificationContent.dailyGoalReachedTitle(8))
         assertEquals("오늘의 목표 1개를 달성했어요!", NotificationContent.dailyGoalReachedTitle(1))
     }
+
+    @Test
+    fun `toggle action label reflects whether the timer is running`() {
+        assertEquals("일시정지", NotificationContent.toggleActionLabel(isRunning = true))
+        assertEquals("재생", NotificationContent.toggleActionLabel(isRunning = false))
+    }
 }

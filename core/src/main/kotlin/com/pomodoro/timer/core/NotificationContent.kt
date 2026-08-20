@@ -22,4 +22,6 @@ object NotificationContent {
     }
 
     fun dailyGoalReachedTitle(target: Int): String = "오늘의 목표 ${target}개를 달성했어요!"
+
+    fun toggleActionLabel(isRunning: Boolean): String = if (isRunning) "일시정지" else "재생"
 }

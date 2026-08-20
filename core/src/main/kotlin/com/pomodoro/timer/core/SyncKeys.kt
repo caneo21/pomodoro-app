@@ -19,4 +19,7 @@ object SyncKeys {
     const val KEY_DAILY_GOAL_TARGET = "dailyGoalTarget"
     const val KEY_DAILY_GOAL_COUNT = "dailyGoalCount"
     const val KEY_DAILY_GOAL_DATE = "dailyGoalDate"
+    const val KEY_NOTIFICATIONS_ENABLED = "notificationsEnabled"
+    const val KEY_VIBRATION_ENABLED = "vibrationEnabled"
+    const val KEY_USE_ALARM_SOUND = "useAlarmSound"
 }

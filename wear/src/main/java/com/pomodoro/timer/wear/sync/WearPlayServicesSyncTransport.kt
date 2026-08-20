@@ -40,6 +40,9 @@ class WearPlayServicesSyncTransport(context: Context) : SyncTransport {
             dataMap.putInt(SyncKeys.KEY_DAILY_GOAL_TARGET, payload.dailyGoalTarget)
             dataMap.putInt(SyncKeys.KEY_DAILY_GOAL_COUNT, payload.dailyGoalCount)
             dataMap.putString(SyncKeys.KEY_DAILY_GOAL_DATE, payload.dailyGoalDate)
+            dataMap.putBoolean(SyncKeys.KEY_NOTIFICATIONS_ENABLED, payload.notificationsEnabled)
+            dataMap.putBoolean(SyncKeys.KEY_VIBRATION_ENABLED, payload.vibrationEnabled)
+            dataMap.putBoolean(SyncKeys.KEY_USE_ALARM_SOUND, payload.useAlarmSound)
         }.asPutDataRequest().setUrgent()
         dataClient.putDataItem(request).await()
     }
@@ -98,6 +101,9 @@ class WearPlayServicesSyncTransport(context: Context) : SyncTransport {
         dailyGoalEnabled = map.getBoolean(SyncKeys.KEY_DAILY_GOAL_ENABLED, false),
         dailyGoalTarget = map.getInt(SyncKeys.KEY_DAILY_GOAL_TARGET, TimerDefaults.DEFAULT_DAILY_GOAL_TARGET),
         dailyGoalCount = map.getInt(SyncKeys.KEY_DAILY_GOAL_COUNT, 0),
-        dailyGoalDate = map.getString(SyncKeys.KEY_DAILY_GOAL_DATE, "")
+        dailyGoalDate = map.getString(SyncKeys.KEY_DAILY_GOAL_DATE, ""),
+        notificationsEnabled = map.getBoolean(SyncKeys.KEY_NOTIFICATIONS_ENABLED, true),
+        vibrationEnabled = map.getBoolean(SyncKeys.KEY_VIBRATION_ENABLED, true),
+        useAlarmSound = map.getBoolean(SyncKeys.KEY_USE_ALARM_SOUND, false)
     )
 }

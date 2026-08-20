@@ -14,6 +14,7 @@ import androidx.core.app.NotificationCompat
 import com.pomodoro.timer.MainActivity
 import com.pomodoro.timer.core.DailyGoalProgress
 import com.pomodoro.timer.core.DailyGoalTracker
+import com.pomodoro.timer.core.NotificationChannels
 import com.pomodoro.timer.core.NotificationContent
 import com.pomodoro.timer.core.TimerDefaults
 import com.pomodoro.timer.core.TimerEngine
@@ -52,9 +53,11 @@ class TimerService : Service() {
         const val EXTRA_AUTO_START_FOCUS = "extra_auto_start_focus"
         const val EXTRA_DAILY_GOAL_ENABLED = "extra_daily_goal_enabled"
         const val EXTRA_DAILY_GOAL_TARGET = "extra_daily_goal_target"
+        const val EXTRA_NOTIFICATIONS_ENABLED = "extra_notifications_enabled"
+        const val EXTRA_VIBRATION_ENABLED = "extra_vibration_enabled"
+        const val EXTRA_USE_ALARM_SOUND = "extra_use_alarm_sound"
 
         private const val CHANNEL_ID = "pomodoro_timer_channel"
-        private const val SESSION_END_CHANNEL_ID = "pomodoro_session_end_channel"
         private const val ONGOING_NOTIFICATION_ID = 1
         private const val SESSION_END_NOTIFICATION_ID = 2
         private const val DAILY_GOAL_NOTIFICATION_ID = 3
@@ -85,6 +88,9 @@ class TimerService : Service() {
         private var dailyGoalEnabled: Boolean = false
         private var dailyGoalTarget: Int = TimerDefaults.DEFAULT_DAILY_GOAL_TARGET
         private var dailyGoalProgress: DailyGoalProgress = DailyGoalProgress("", 0)
+        private var notificationsEnabled: Boolean = true
+        private var vibrationEnabled: Boolean = true
+        private var useAlarmSound: Boolean = false
     }
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -117,6 +123,9 @@ class TimerService : Service() {
         autoStartFocus = payload.autoStartFocus
         dailyGoalEnabled = payload.dailyGoalEnabled
         dailyGoalTarget = payload.dailyGoalTarget
+        notificationsEnabled = payload.notificationsEnabled
+        vibrationEnabled = payload.vibrationEnabled
+        useAlarmSound = payload.useAlarmSound
         if (payload.dailyGoalDate.isNotEmpty()) {
             dailyGoalProgress = DailyGoalProgress(payload.dailyGoalDate, payload.dailyGoalCount)
             serviceScope.launch { settingsRepository.setDailyGoalProgress(payload.dailyGoalDate, payload.dailyGoalCount) }
@@ -144,7 +153,10 @@ class TimerService : Service() {
                 dailyGoalEnabled = dailyGoalEnabled,
                 dailyGoalTarget = dailyGoalTarget,
                 dailyGoalCount = dailyGoalProgress.count,
-                dailyGoalDate = dailyGoalProgress.date
+                dailyGoalDate = dailyGoalProgress.date,
+                notificationsEnabled = notificationsEnabled,
+                vibrationEnabled = vibrationEnabled,
+                useAlarmSound = useAlarmSound
             )
         )
     }
@@ -199,6 +211,9 @@ class TimerService : Service() {
                 autoStartFocus = intent.getBooleanExtra(EXTRA_AUTO_START_FOCUS, false)
                 dailyGoalEnabled = intent.getBooleanExtra(EXTRA_DAILY_GOAL_ENABLED, false)
                 dailyGoalTarget = intent.getIntExtra(EXTRA_DAILY_GOAL_TARGET, TimerDefaults.DEFAULT_DAILY_GOAL_TARGET)
+                notificationsEnabled = intent.getBooleanExtra(EXTRA_NOTIFICATIONS_ENABLED, true)
+                vibrationEnabled = intent.getBooleanExtra(EXTRA_VIBRATION_ENABLED, true)
+                useAlarmSound = intent.getBooleanExtra(EXTRA_USE_ALARM_SOUND, false)
                 engine.updateDurations(
                     focusMinutes * 60_000L,
                     breakMinutes * 60_000L,
@@ -263,25 +278,32 @@ class TimerService : Service() {
             manager.createNotificationChannel(
                 NotificationChannel(CHANNEL_ID, "Pomodoro Timer", NotificationManager.IMPORTANCE_LOW)
             )
-            // Channel importance overrides setPriority/setDefaults on API 26+, so session-end
-            // alerts need their own IMPORTANCE_HIGH channel to make any sound at all.
-            val sessionEndChannel = NotificationChannel(
-                SESSION_END_CHANNEL_ID,
-                "세션 종료 알림",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                enableVibration(true)
-                setSound(
-                    RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
-                    AudioAttributes.Builder()
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .setUsage(AudioAttributes.USAGE_NOTIFICATION)
-                        .build()
-                )
+            // Channel importance/sound/vibration are immutable once created on API 26+, so every
+            // sound x vibration combination the user can pick in Settings gets its own pre-created
+            // channel; showSessionEndNotification/showDailyGoalReachedNotification just select one.
+            for (useAlarm in listOf(false, true)) {
+                for (vibrate in listOf(false, true)) {
+                    val channelId = NotificationChannels.sessionEndChannelId(useAlarm, vibrate)
+                    val channel = NotificationChannel(channelId, "세션 종료 알림", NotificationManager.IMPORTANCE_HIGH).apply {
+                        enableVibration(vibrate)
+                        setSound(
+                            RingtoneManager.getDefaultUri(
+                                if (useAlarm) RingtoneManager.TYPE_ALARM else RingtoneManager.TYPE_NOTIFICATION
+                            ),
+                            AudioAttributes.Builder()
+                                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                                .build()
+                        )
+                    }
+                    manager.createNotificationChannel(channel)
+                }
             }
-            manager.createNotificationChannel(sessionEndChannel)
         }
     }
+
+    private fun sessionEndChannelId(): String =
+        NotificationChannels.sessionEndChannelId(useAlarmSound, vibrationEnabled)
 
     private fun contentIntent(): PendingIntent {
         val intent = Intent(this, MainActivity::class.java)
@@ -289,13 +311,15 @@ class TimerService : Service() {
         return PendingIntent.getActivity(this, 0, intent, flags)
     }
 
-    private fun pauseActionIntent(): PendingIntent {
-        val intent = Intent(this, TimerService::class.java).setAction(ACTION_PAUSE)
+    private fun actionIntent(action: String): PendingIntent {
+        val intent = Intent(this, TimerService::class.java).setAction(action)
         val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         return PendingIntent.getForegroundService(this, 0, intent, flags)
     }
 
     private fun buildOngoingNotification(state: TimerState): Notification {
+        val toggleAction = if (state.isRunning) ACTION_PAUSE else ACTION_START
+        val toggleIcon = if (state.isRunning) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_popup_reminder)
             .setContentTitle(NotificationContent.ongoingTitle(state.phase))
@@ -303,9 +327,8 @@ class TimerService : Service() {
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setContentIntent(contentIntent())
-        if (state.isRunning) {
-            builder.addAction(android.R.drawable.ic_media_pause, "일시정지", pauseActionIntent())
-        }
+            .addAction(toggleIcon, NotificationContent.toggleActionLabel(state.isRunning), actionIntent(toggleAction))
+            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "리셋", actionIntent(ACTION_RESET))
         return builder.build()
     }
 
@@ -315,11 +338,11 @@ class TimerService : Service() {
     }
 
     private fun showSessionEndNotification(newPhase: TimerPhase) {
-        val notification = NotificationCompat.Builder(this, SESSION_END_CHANNEL_ID)
+        if (!notificationsEnabled) return
+        val notification = NotificationCompat.Builder(this, sessionEndChannelId())
             .setSmallIcon(android.R.drawable.ic_popup_reminder)
             .setContentTitle(NotificationContent.sessionEndTitle(newPhase))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setDefaults(NotificationCompat.DEFAULT_SOUND or NotificationCompat.DEFAULT_VIBRATE)
             .setAutoCancel(true)
             .setContentIntent(contentIntent())
             .build()
@@ -327,11 +350,11 @@ class TimerService : Service() {
     }
 
     private fun showDailyGoalReachedNotification(target: Int) {
-        val notification = NotificationCompat.Builder(this, SESSION_END_CHANNEL_ID)
+        if (!notificationsEnabled) return
+        val notification = NotificationCompat.Builder(this, sessionEndChannelId())
             .setSmallIcon(android.R.drawable.ic_popup_reminder)
             .setContentTitle(NotificationContent.dailyGoalReachedTitle(target))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setDefaults(NotificationCompat.DEFAULT_SOUND or NotificationCompat.DEFAULT_VIBRATE)
             .setAutoCancel(true)
             .setContentIntent(contentIntent())
             .build()

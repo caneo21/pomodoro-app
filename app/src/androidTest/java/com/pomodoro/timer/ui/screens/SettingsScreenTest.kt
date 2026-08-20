@@ -152,4 +152,40 @@ class SettingsScreenTest {
 
         assertTrue(enabledToggled == true)
     }
+
+    @Test
+    fun notificationControls_areDisplayed_andInvokeCallbacks() {
+        var notificationsToggled: Boolean? = null
+        var vibrationToggled: Boolean? = null
+        var useAlarmSoundToggled: Boolean? = null
+        composeRule.setContent {
+            PomodoroTheme {
+                SettingsScreen(
+                    focusMinutes = 25,
+                    breakMinutes = 5,
+                    notificationsEnabled = true,
+                    vibrationEnabled = true,
+                    useAlarmSound = false,
+                    onFocusMinutesChange = {},
+                    onBreakMinutesChange = {},
+                    onNotificationsEnabledChange = { notificationsToggled = it },
+                    onVibrationEnabledChange = { vibrationToggled = it },
+                    onUseAlarmSoundChange = { useAlarmSoundToggled = it },
+                    onBack = {}
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("notificationsEnabledLabel").assertExists()
+        composeRule.onNodeWithTag("vibrationEnabledLabel").assertExists()
+        composeRule.onNodeWithTag("useAlarmSoundLabel").assertExists()
+
+        composeRule.onNodeWithTag("notificationsEnabledSwitch").performClick()
+        composeRule.onNodeWithTag("vibrationEnabledSwitch").performClick()
+        composeRule.onNodeWithTag("useAlarmSoundSwitch").performClick()
+
+        assertTrue(notificationsToggled == false)
+        assertTrue(vibrationToggled == false)
+        assertTrue(useAlarmSoundToggled == true)
+    }
 }

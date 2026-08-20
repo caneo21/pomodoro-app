@@ -15,6 +15,7 @@ import androidx.wear.ongoing.OngoingActivity
 import androidx.wear.ongoing.Status
 import com.pomodoro.timer.core.DailyGoalProgress
 import com.pomodoro.timer.core.DailyGoalTracker
+import com.pomodoro.timer.core.NotificationChannels
 import com.pomodoro.timer.core.NotificationContent
 import com.pomodoro.timer.core.SyncCoordinator
 import com.pomodoro.timer.core.SyncPayload
@@ -47,7 +48,6 @@ class WearTimerService : Service() {
         private const val SESSION_END_NOTIFICATION_ID = 2
         private const val DAILY_GOAL_NOTIFICATION_ID = 3
         private const val CHANNEL_ID = "pomodoro_wear_timer_channel"
-        private const val SESSION_END_CHANNEL_ID = "pomodoro_wear_session_end_channel"
         private const val TICK_INTERVAL_MILLIS = 1_000L
 
         private val defaultFocusMillis = TimerDefaults.DEFAULT_FOCUS_MINUTES * 60_000L
@@ -92,6 +92,12 @@ class WearTimerService : Service() {
         // (existing constraint), so this is hydrated purely from sync and resets to zero on a
         // fresh install or process restart, same cold-start gap every other watch setting has.
         private var dailyGoalProgress: DailyGoalProgress = DailyGoalProgress("", 0)
+
+        // Same "no local persistence" reasoning as dailyGoalProgress above: these are configured
+        // only from the phone's Settings screen and reach the watch purely via sync.
+        private var notificationsEnabled: Boolean = true
+        private var vibrationEnabled: Boolean = true
+        private var useAlarmSound: Boolean = false
     }
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -122,6 +128,9 @@ class WearTimerService : Service() {
         _dailyGoalEnabled.value = payload.dailyGoalEnabled
         _dailyGoalTarget.value = payload.dailyGoalTarget
         dailyGoalProgress = DailyGoalProgress(payload.dailyGoalDate, payload.dailyGoalCount)
+        notificationsEnabled = payload.notificationsEnabled
+        vibrationEnabled = payload.vibrationEnabled
+        useAlarmSound = payload.useAlarmSound
         _state.value = engine.adoptRemote(payload, System.currentTimeMillis())
         if (_state.value.isRunning) startTicker() else stopTicker()
         updateOngoingNotification(_state.value)
@@ -184,12 +193,17 @@ class WearTimerService : Service() {
                 dailyGoalEnabled = _dailyGoalEnabled.value,
                 dailyGoalTarget = _dailyGoalTarget.value,
                 dailyGoalCount = dailyGoalProgress.count,
-                dailyGoalDate = dailyGoalProgress.date
+                dailyGoalDate = dailyGoalProgress.date,
+                notificationsEnabled = notificationsEnabled,
+                vibrationEnabled = vibrationEnabled,
+                useAlarmSound = useAlarmSound
             )
         )
     }
 
     private fun buildOngoingNotification(state: TimerState): Notification {
+        val toggleAction = if (state.isRunning) ACTION_PAUSE else ACTION_START
+        val toggleIcon = if (state.isRunning) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_popup_reminder)
             .setContentTitle(NotificationContent.ongoingTitle(state.phase))
@@ -197,6 +211,8 @@ class WearTimerService : Service() {
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setContentIntent(contentIntent())
+            .addAction(toggleIcon, NotificationContent.toggleActionLabel(state.isRunning), actionIntent(toggleAction))
+            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "리셋", actionIntent(ACTION_RESET))
 
         val status = Status.Builder()
             .addTemplate("${NotificationContent.ongoingTitle(state.phase)} · ${NotificationContent.ongoingText(state.remainingMillis)}")
@@ -249,11 +265,11 @@ class WearTimerService : Service() {
     }
 
     private fun onSessionEnded(newState: TimerState) {
-        val notification = NotificationCompat.Builder(this, SESSION_END_CHANNEL_ID)
+        if (!notificationsEnabled) return
+        val notification = NotificationCompat.Builder(this, sessionEndChannelId())
             .setSmallIcon(android.R.drawable.ic_popup_reminder)
             .setContentTitle(NotificationContent.sessionEndTitle(newState.phase))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setDefaults(NotificationCompat.DEFAULT_SOUND or NotificationCompat.DEFAULT_VIBRATE)
             .setAutoCancel(true)
             .setContentIntent(contentIntent())
             .build()
@@ -261,16 +277,19 @@ class WearTimerService : Service() {
     }
 
     private fun showDailyGoalReachedNotification(target: Int) {
-        val notification = NotificationCompat.Builder(this, SESSION_END_CHANNEL_ID)
+        if (!notificationsEnabled) return
+        val notification = NotificationCompat.Builder(this, sessionEndChannelId())
             .setSmallIcon(android.R.drawable.ic_popup_reminder)
             .setContentTitle(NotificationContent.dailyGoalReachedTitle(target))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setDefaults(NotificationCompat.DEFAULT_SOUND or NotificationCompat.DEFAULT_VIBRATE)
             .setAutoCancel(true)
             .setContentIntent(contentIntent())
             .build()
         getSystemService(NotificationManager::class.java).notify(DAILY_GOAL_NOTIFICATION_ID, notification)
     }
+
+    private fun sessionEndChannelId(): String =
+        NotificationChannels.sessionEndChannelId(useAlarmSound, vibrationEnabled)
 
     private fun stopTicker() {
         tickerJob?.cancel()
@@ -283,21 +302,24 @@ class WearTimerService : Service() {
             manager.createNotificationChannel(
                 NotificationChannel(CHANNEL_ID, "Pomodoro Timer", NotificationManager.IMPORTANCE_LOW)
             )
-            val sessionEndChannel = NotificationChannel(
-                SESSION_END_CHANNEL_ID,
-                "세션 종료 알림",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                enableVibration(true)
-                setSound(
-                    RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
-                    AudioAttributes.Builder()
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .setUsage(AudioAttributes.USAGE_NOTIFICATION)
-                        .build()
-                )
+            for (useAlarm in listOf(false, true)) {
+                for (vibrate in listOf(false, true)) {
+                    val channelId = NotificationChannels.sessionEndChannelId(useAlarm, vibrate)
+                    val channel = NotificationChannel(channelId, "세션 종료 알림", NotificationManager.IMPORTANCE_HIGH).apply {
+                        enableVibration(vibrate)
+                        setSound(
+                            RingtoneManager.getDefaultUri(
+                                if (useAlarm) RingtoneManager.TYPE_ALARM else RingtoneManager.TYPE_NOTIFICATION
+                            ),
+                            AudioAttributes.Builder()
+                                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                                .build()
+                        )
+                    }
+                    manager.createNotificationChannel(channel)
+                }
             }
-            manager.createNotificationChannel(sessionEndChannel)
         }
     }
 
@@ -305,6 +327,12 @@ class WearTimerService : Service() {
         val intent = Intent(this, MainActivity::class.java)
         val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         return PendingIntent.getActivity(this, 0, intent, flags)
+    }
+
+    private fun actionIntent(action: String): PendingIntent {
+        val intent = Intent(this, WearTimerService::class.java).setAction(action)
+        val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        return PendingIntent.getForegroundService(this, 0, intent, flags)
     }
 
     override fun onDestroy() {

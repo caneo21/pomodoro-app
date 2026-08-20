@@ -23,5 +23,8 @@ data class SyncPayload(
     val dailyGoalEnabled: Boolean = false,
     val dailyGoalTarget: Int = TimerDefaults.DEFAULT_DAILY_GOAL_TARGET,
     val dailyGoalCount: Int = 0,
-    val dailyGoalDate: String = ""
+    val dailyGoalDate: String = "",
+    val notificationsEnabled: Boolean = true,
+    val vibrationEnabled: Boolean = true,
+    val useAlarmSound: Boolean = false
 )

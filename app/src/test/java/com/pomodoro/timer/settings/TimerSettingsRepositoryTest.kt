@@ -169,6 +169,33 @@ class TimerSettingsRepositoryTest {
     }
 
     @Test
+    fun `settings default to notifications enabled, vibration enabled, and notification sound`() = runTest {
+        val repository = TimerSettingsRepository(newDataStore())
+
+        val settings = repository.settings.first()
+
+        assertEquals(true, settings.notificationsEnabled)
+        assertEquals(true, settings.vibrationEnabled)
+        assertEquals(false, settings.useAlarmSound)
+    }
+
+    @Test
+    fun `updateNotificationsEnabled, updateVibrationEnabled, and updateUseAlarmSound persist independently`() = runTest {
+        val repository = TimerSettingsRepository(newDataStore())
+
+        repository.updateNotificationsEnabled(false)
+        assertEquals(false, repository.settings.first().notificationsEnabled)
+        assertEquals(true, repository.settings.first().vibrationEnabled)
+        assertEquals(false, repository.settings.first().useAlarmSound)
+
+        repository.updateVibrationEnabled(false)
+        assertEquals(false, repository.settings.first().vibrationEnabled)
+
+        repository.updateUseAlarmSound(true)
+        assertEquals(true, repository.settings.first().useAlarmSound)
+    }
+
+    @Test
     fun `dailyGoalProgress defaults to an empty date and zero count`() = runTest {
         val repository = TimerSettingsRepository(newDataStore())
 

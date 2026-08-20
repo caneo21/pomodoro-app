@@ -19,7 +19,10 @@ data class TimerUiState(
     val autoStartFocus: Boolean = false,
     val keepScreenOn: Boolean = false,
     val dailyGoalEnabled: Boolean = false,
-    val dailyGoalTarget: Int = TimerDefaults.DEFAULT_DAILY_GOAL_TARGET
+    val dailyGoalTarget: Int = TimerDefaults.DEFAULT_DAILY_GOAL_TARGET,
+    val notificationsEnabled: Boolean = true,
+    val vibrationEnabled: Boolean = true,
+    val useAlarmSound: Boolean = false
 )
 
 fun buildUiState(timer: TimerState, settings: TimerSettings): TimerUiState = TimerUiState(
@@ -36,5 +39,8 @@ fun buildUiState(timer: TimerState, settings: TimerSettings): TimerUiState = Tim
     autoStartFocus = settings.autoStartFocus,
     keepScreenOn = settings.keepScreenOn,
     dailyGoalEnabled = settings.dailyGoalEnabled,
-    dailyGoalTarget = settings.dailyGoalTarget
+    dailyGoalTarget = settings.dailyGoalTarget,
+    notificationsEnabled = settings.notificationsEnabled,
+    vibrationEnabled = settings.vibrationEnabled,
+    useAlarmSound = settings.useAlarmSound
 )

@@ -50,6 +50,12 @@ fun SettingsScreen(
     dailyGoalTarget: Int = TimerDefaults.DEFAULT_DAILY_GOAL_TARGET,
     onDailyGoalEnabledChange: (Boolean) -> Unit = {},
     onDailyGoalTargetChange: (Int) -> Unit = {},
+    notificationsEnabled: Boolean = true,
+    vibrationEnabled: Boolean = true,
+    useAlarmSound: Boolean = false,
+    onNotificationsEnabledChange: (Boolean) -> Unit = {},
+    onVibrationEnabledChange: (Boolean) -> Unit = {},
+    onUseAlarmSoundChange: (Boolean) -> Unit = {},
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -193,6 +199,57 @@ fun SettingsScreen(
             steps = TimerDefaults.MAX_DAILY_GOAL_TARGET - TimerDefaults.MIN_DAILY_GOAL_TARGET - 1,
             modifier = Modifier.testTag("dailyGoalTargetSlider")
         )
+
+        Spacer(Modifier.height(24.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "알림 사용",
+                modifier = Modifier.weight(1f).testTag("notificationsEnabledLabel")
+            )
+            Switch(
+                checked = notificationsEnabled,
+                onCheckedChange = onNotificationsEnabledChange,
+                modifier = Modifier.testTag("notificationsEnabledSwitch")
+            )
+        }
+
+        Spacer(Modifier.height(16.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "진동",
+                modifier = Modifier.weight(1f).testTag("vibrationEnabledLabel")
+            )
+            Switch(
+                checked = vibrationEnabled,
+                onCheckedChange = onVibrationEnabledChange,
+                modifier = Modifier.testTag("vibrationEnabledSwitch")
+            )
+        }
+
+        Spacer(Modifier.height(16.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "알람음 사용 (끄면 알림음)",
+                modifier = Modifier.weight(1f).testTag("useAlarmSoundLabel")
+            )
+            Switch(
+                checked = useAlarmSound,
+                onCheckedChange = onUseAlarmSoundChange,
+                modifier = Modifier.testTag("useAlarmSoundSwitch")
+            )
+        }
 
         Spacer(Modifier.height(24.dp))
         Button(onClick = onBack, modifier = Modifier.testTag("backButton")) {

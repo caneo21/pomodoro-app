@@ -198,4 +198,45 @@ class TimerViewModelTest {
         assertEquals(true, uiState.dailyGoalEnabled)
         assertEquals(12, uiState.dailyGoalTarget)
     }
+
+    @Test
+    fun `updateNotificationsEnabled, updateVibrationEnabled, and updateUseAlarmSound persist through the repository`() =
+        runTest(dispatcher) {
+            val timerState = MutableStateFlow(
+                TimerState(TimerPhase.FOCUS, isRunning = false, remainingMillis = 1_500_000L, totalMillis = 1_500_000L)
+            )
+            val viewModel = newViewModel(timerState)
+
+            viewModel.updateNotificationsEnabled(false)
+            viewModel.updateVibrationEnabled(false)
+            viewModel.updateUseAlarmSound(true)
+
+            val uiState = viewModel.uiState.first { it.useAlarmSound }
+
+            assertEquals(false, uiState.notificationsEnabled)
+            assertEquals(false, uiState.vibrationEnabled)
+            assertEquals(true, uiState.useAlarmSound)
+        }
+
+    @Test
+    fun `settings emissions pushed to the timer service include notification settings`() = runTest(dispatcher) {
+        val timerState = MutableStateFlow(
+            TimerState(TimerPhase.FOCUS, isRunning = false, remainingMillis = 1_500_000L, totalMillis = 1_500_000L)
+        )
+        val pushedSettings = MutableStateFlow<TimerSettings?>(null)
+        val viewModel = newViewModel(
+            timerState,
+            onUpdateDurations = { pushedSettings.value = it }
+        )
+        pushedSettings.first { it != null }
+
+        viewModel.updateNotificationsEnabled(false)
+        viewModel.updateVibrationEnabled(false)
+        viewModel.updateUseAlarmSound(true)
+
+        val updated = pushedSettings.first { it?.useAlarmSound == true }
+        assertEquals(false, updated?.notificationsEnabled)
+        assertEquals(false, updated?.vibrationEnabled)
+        assertEquals(true, updated?.useAlarmSound)
+    }
 }

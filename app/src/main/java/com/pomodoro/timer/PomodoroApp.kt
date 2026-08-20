@@ -50,6 +50,12 @@ fun PomodoroApp(viewModel: TimerViewModel) {
                 dailyGoalTarget = uiState.dailyGoalTarget,
                 onDailyGoalEnabledChange = viewModel::updateDailyGoalEnabled,
                 onDailyGoalTargetChange = viewModel::updateDailyGoalTarget,
+                notificationsEnabled = uiState.notificationsEnabled,
+                vibrationEnabled = uiState.vibrationEnabled,
+                useAlarmSound = uiState.useAlarmSound,
+                onNotificationsEnabledChange = viewModel::updateNotificationsEnabled,
+                onVibrationEnabledChange = viewModel::updateVibrationEnabled,
+                onUseAlarmSoundChange = viewModel::updateUseAlarmSound,
                 onBack = { navController.popBackStack() }
             )
         }

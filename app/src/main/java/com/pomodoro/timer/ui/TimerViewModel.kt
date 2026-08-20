@@ -78,6 +78,18 @@ class TimerViewModel(
         viewModelScope.launch { settingsRepository.updateDailyGoalTarget(target) }
     }
 
+    fun updateNotificationsEnabled(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.updateNotificationsEnabled(enabled) }
+    }
+
+    fun updateVibrationEnabled(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.updateVibrationEnabled(enabled) }
+    }
+
+    fun updateUseAlarmSound(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.updateUseAlarmSound(enabled) }
+    }
+
     class Factory(private val appContext: Context) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -97,6 +109,9 @@ class TimerViewModel(
                     .putExtra(TimerService.EXTRA_AUTO_START_FOCUS, settings.autoStartFocus)
                     .putExtra(TimerService.EXTRA_DAILY_GOAL_ENABLED, settings.dailyGoalEnabled)
                     .putExtra(TimerService.EXTRA_DAILY_GOAL_TARGET, settings.dailyGoalTarget)
+                    .putExtra(TimerService.EXTRA_NOTIFICATIONS_ENABLED, settings.notificationsEnabled)
+                    .putExtra(TimerService.EXTRA_VIBRATION_ENABLED, settings.vibrationEnabled)
+                    .putExtra(TimerService.EXTRA_USE_ALARM_SOUND, settings.useAlarmSound)
                 ContextCompat.startForegroundService(appContext, intent)
             }
             return TimerViewModel(TimerService.state, repository, onCommand, onUpdateDurations) as T

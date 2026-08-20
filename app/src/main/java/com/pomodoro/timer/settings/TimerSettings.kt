@@ -11,5 +11,8 @@ data class TimerSettings(
     val autoStartFocus: Boolean = false,
     val keepScreenOn: Boolean = false,
     val dailyGoalEnabled: Boolean = false,
-    val dailyGoalTarget: Int = TimerDefaults.DEFAULT_DAILY_GOAL_TARGET
+    val dailyGoalTarget: Int = TimerDefaults.DEFAULT_DAILY_GOAL_TARGET,
+    val notificationsEnabled: Boolean = true,
+    val vibrationEnabled: Boolean = true,
+    val useAlarmSound: Boolean = false
 )

@@ -83,4 +83,22 @@ class TimerUiStateTest {
         assertEquals(true, uiState.dailyGoalEnabled)
         assertEquals(12, uiState.dailyGoalTarget)
     }
+
+    @Test
+    fun `buildUiState carries notification settings through`() {
+        val timer = TimerState(phase = TimerPhase.FOCUS, isRunning = false, remainingMillis = 1_500_000L, totalMillis = 1_500_000L)
+        val settings = TimerSettings(
+            focusMinutes = 25,
+            breakMinutes = 5,
+            notificationsEnabled = false,
+            vibrationEnabled = false,
+            useAlarmSound = true
+        )
+
+        val uiState = buildUiState(timer, settings)
+
+        assertEquals(false, uiState.notificationsEnabled)
+        assertEquals(false, uiState.vibrationEnabled)
+        assertEquals(true, uiState.useAlarmSound)
+    }
 }
