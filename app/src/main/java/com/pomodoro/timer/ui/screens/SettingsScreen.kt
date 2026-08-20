@@ -1,6 +1,10 @@
 package com.pomodoro.timer.ui.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,8 +14,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
@@ -25,9 +31,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import com.pomodoro.timer.core.ColorTheme
 import com.pomodoro.timer.core.TimerDefaults
+import com.pomodoro.timer.ui.theme.paletteFor
 import kotlin.math.roundToInt
 
 @Composable
@@ -56,6 +65,8 @@ fun SettingsScreen(
     onNotificationsEnabledChange: (Boolean) -> Unit = {},
     onVibrationEnabledChange: (Boolean) -> Unit = {},
     onUseAlarmSoundChange: (Boolean) -> Unit = {},
+    colorTheme: ColorTheme = ColorTheme.DEFAULT,
+    onColorThemeChange: (ColorTheme) -> Unit = {},
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -249,6 +260,29 @@ fun SettingsScreen(
                 onCheckedChange = onUseAlarmSoundChange,
                 modifier = Modifier.testTag("useAlarmSoundSwitch")
             )
+        }
+
+        Spacer(Modifier.height(24.dp))
+        Text("테마")
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            for (theme in ColorTheme.entries) {
+                val swatchColor = paletteFor(theme, darkTheme = false).primary
+                val isSelected = theme == colorTheme
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(swatchColor)
+                        .border(
+                            width = if (isSelected) 3.dp else 0.dp,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            shape = CircleShape
+                        )
+                        .clickable { onColorThemeChange(theme) }
+                        .testTag("colorThemeSwatch_${theme.name}")
+                )
+            }
         }
 
         Spacer(Modifier.height(24.dp))

@@ -10,7 +10,9 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pomodoro.timer.ui.TimerViewModel
 import com.pomodoro.timer.ui.theme.PomodoroTheme
 
@@ -31,7 +33,8 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            PomodoroTheme {
+            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            PomodoroTheme(colorTheme = uiState.colorTheme) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background

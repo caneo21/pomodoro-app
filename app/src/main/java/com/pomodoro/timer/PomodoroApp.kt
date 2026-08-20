@@ -56,6 +56,8 @@ fun PomodoroApp(viewModel: TimerViewModel) {
                 onNotificationsEnabledChange = viewModel::updateNotificationsEnabled,
                 onVibrationEnabledChange = viewModel::updateVibrationEnabled,
                 onUseAlarmSoundChange = viewModel::updateUseAlarmSound,
+                colorTheme = uiState.colorTheme,
+                onColorThemeChange = viewModel::updateColorTheme,
                 onBack = { navController.popBackStack() }
             )
         }

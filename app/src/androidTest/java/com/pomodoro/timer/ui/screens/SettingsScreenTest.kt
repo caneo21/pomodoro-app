@@ -4,6 +4,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import com.pomodoro.timer.core.ColorTheme
 import com.pomodoro.timer.ui.theme.PomodoroTheme
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -188,5 +189,31 @@ class SettingsScreenTest {
         assertTrue(notificationsToggled == false)
         assertTrue(vibrationToggled == false)
         assertTrue(useAlarmSoundToggled == true)
+    }
+
+    @Test
+    fun colorThemeSwatches_areDisplayed_andInvokeCallback() {
+        var themeSelected: ColorTheme? = null
+        composeRule.setContent {
+            PomodoroTheme {
+                SettingsScreen(
+                    focusMinutes = 25,
+                    breakMinutes = 5,
+                    colorTheme = ColorTheme.DEFAULT,
+                    onFocusMinutesChange = {},
+                    onBreakMinutesChange = {},
+                    onColorThemeChange = { themeSelected = it },
+                    onBack = {}
+                )
+            }
+        }
+
+        for (theme in ColorTheme.entries) {
+            composeRule.onNodeWithTag("colorThemeSwatch_${theme.name}").assertExists()
+        }
+
+        composeRule.onNodeWithTag("colorThemeSwatch_${ColorTheme.OCEAN.name}").performScrollTo().performClick()
+
+        assertTrue(themeSelected == ColorTheme.OCEAN)
     }
 }
