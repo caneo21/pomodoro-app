@@ -8,6 +8,7 @@ import com.google.android.gms.wearable.DataMap
 import com.google.android.gms.wearable.DataMapItem
 import com.google.android.gms.wearable.PutDataMapRequest
 import com.google.android.gms.wearable.Wearable
+import com.pomodoro.timer.core.ColorTheme
 import com.pomodoro.timer.core.SyncKeys
 import com.pomodoro.timer.core.SyncPayload
 import com.pomodoro.timer.core.SyncTransport
@@ -48,6 +49,7 @@ class PlayServicesSyncTransport(context: Context) : SyncTransport {
             dataMap.putBoolean(SyncKeys.KEY_NOTIFICATIONS_ENABLED, payload.notificationsEnabled)
             dataMap.putBoolean(SyncKeys.KEY_VIBRATION_ENABLED, payload.vibrationEnabled)
             dataMap.putBoolean(SyncKeys.KEY_USE_ALARM_SOUND, payload.useAlarmSound)
+            dataMap.putString(SyncKeys.KEY_COLOR_THEME, payload.colorTheme.name)
         }.asPutDataRequest().setUrgent()
         dataClient.putDataItem(request).await()
     }
@@ -109,6 +111,9 @@ class PlayServicesSyncTransport(context: Context) : SyncTransport {
         dailyGoalDate = map.getString(SyncKeys.KEY_DAILY_GOAL_DATE, ""),
         notificationsEnabled = map.getBoolean(SyncKeys.KEY_NOTIFICATIONS_ENABLED, true),
         vibrationEnabled = map.getBoolean(SyncKeys.KEY_VIBRATION_ENABLED, true),
-        useAlarmSound = map.getBoolean(SyncKeys.KEY_USE_ALARM_SOUND, false)
+        useAlarmSound = map.getBoolean(SyncKeys.KEY_USE_ALARM_SOUND, false),
+        colorTheme = enumValues<ColorTheme>()
+            .firstOrNull { it.name == map.getString(SyncKeys.KEY_COLOR_THEME, ColorTheme.DEFAULT.name) }
+            ?: ColorTheme.DEFAULT
     )
 }
