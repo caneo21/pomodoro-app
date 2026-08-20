@@ -1,5 +1,6 @@
 package com.pomodoro.timer.ui
 
+import com.pomodoro.timer.core.ColorTheme
 import com.pomodoro.timer.core.TimerDefaults
 import com.pomodoro.timer.core.TimerPhase
 import com.pomodoro.timer.core.TimerState
@@ -22,7 +23,8 @@ data class TimerUiState(
     val dailyGoalTarget: Int = TimerDefaults.DEFAULT_DAILY_GOAL_TARGET,
     val notificationsEnabled: Boolean = true,
     val vibrationEnabled: Boolean = true,
-    val useAlarmSound: Boolean = false
+    val useAlarmSound: Boolean = false,
+    val colorTheme: ColorTheme = ColorTheme.DEFAULT
 )
 
 fun buildUiState(timer: TimerState, settings: TimerSettings): TimerUiState = TimerUiState(
@@ -42,5 +44,6 @@ fun buildUiState(timer: TimerState, settings: TimerSettings): TimerUiState = Tim
     dailyGoalTarget = settings.dailyGoalTarget,
     notificationsEnabled = settings.notificationsEnabled,
     vibrationEnabled = settings.vibrationEnabled,
-    useAlarmSound = settings.useAlarmSound
+    useAlarmSound = settings.useAlarmSound,
+    colorTheme = settings.colorTheme
 )

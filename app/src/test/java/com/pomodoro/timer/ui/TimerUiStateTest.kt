@@ -1,5 +1,6 @@
 package com.pomodoro.timer.ui
 
+import com.pomodoro.timer.core.ColorTheme
 import com.pomodoro.timer.core.TimerPhase
 import com.pomodoro.timer.core.TimerState
 import com.pomodoro.timer.settings.TimerSettings
@@ -100,5 +101,15 @@ class TimerUiStateTest {
         assertEquals(false, uiState.notificationsEnabled)
         assertEquals(false, uiState.vibrationEnabled)
         assertEquals(true, uiState.useAlarmSound)
+    }
+
+    @Test
+    fun `buildUiState carries colorTheme through`() {
+        val timer = TimerState(phase = TimerPhase.FOCUS, isRunning = false, remainingMillis = 1_500_000L, totalMillis = 1_500_000L)
+        val settings = TimerSettings(focusMinutes = 25, breakMinutes = 5, colorTheme = ColorTheme.OCEAN)
+
+        val uiState = buildUiState(timer, settings)
+
+        assertEquals(ColorTheme.OCEAN, uiState.colorTheme)
     }
 }
