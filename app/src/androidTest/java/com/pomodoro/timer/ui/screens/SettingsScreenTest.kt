@@ -29,7 +29,7 @@ class SettingsScreenTest {
             }
         }
 
-        composeRule.onNodeWithTag("backButton").performClick()
+        composeRule.onNodeWithTag("backButton").performScrollTo().performClick()
         assertTrue(backClicked)
     }
 
