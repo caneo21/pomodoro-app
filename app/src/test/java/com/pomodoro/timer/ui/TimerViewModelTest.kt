@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.viewModelScope
+import com.pomodoro.timer.core.ColorTheme
 import com.pomodoro.timer.core.TimerPhase
 import com.pomodoro.timer.core.TimerState
 import com.pomodoro.timer.settings.TimerSettings
@@ -197,6 +198,20 @@ class TimerViewModelTest {
 
         assertEquals(true, uiState.dailyGoalEnabled)
         assertEquals(12, uiState.dailyGoalTarget)
+    }
+
+    @Test
+    fun `updateColorTheme persists through the repository`() = runTest(dispatcher) {
+        val timerState = MutableStateFlow(
+            TimerState(TimerPhase.FOCUS, isRunning = false, remainingMillis = 1_500_000L, totalMillis = 1_500_000L)
+        )
+        val viewModel = newViewModel(timerState)
+
+        viewModel.updateColorTheme(ColorTheme.FOREST)
+
+        val uiState = viewModel.uiState.first { it.colorTheme == ColorTheme.FOREST }
+
+        assertEquals(ColorTheme.FOREST, uiState.colorTheme)
     }
 
     @Test

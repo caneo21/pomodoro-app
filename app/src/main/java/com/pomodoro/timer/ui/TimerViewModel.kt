@@ -6,6 +6,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.pomodoro.timer.core.ColorTheme
 import com.pomodoro.timer.core.TimerState
 import com.pomodoro.timer.settings.TimerSettings
 import com.pomodoro.timer.settings.TimerSettingsRepository
@@ -90,6 +91,10 @@ class TimerViewModel(
         viewModelScope.launch { settingsRepository.updateUseAlarmSound(enabled) }
     }
 
+    fun updateColorTheme(theme: ColorTheme) {
+        viewModelScope.launch { settingsRepository.updateColorTheme(theme) }
+    }
+
     class Factory(private val appContext: Context) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -112,6 +117,7 @@ class TimerViewModel(
                     .putExtra(TimerService.EXTRA_NOTIFICATIONS_ENABLED, settings.notificationsEnabled)
                     .putExtra(TimerService.EXTRA_VIBRATION_ENABLED, settings.vibrationEnabled)
                     .putExtra(TimerService.EXTRA_USE_ALARM_SOUND, settings.useAlarmSound)
+                    .putExtra(TimerService.EXTRA_COLOR_THEME, settings.colorTheme.name)
                 ContextCompat.startForegroundService(appContext, intent)
             }
             return TimerViewModel(TimerService.state, repository, onCommand, onUpdateDurations) as T

@@ -12,6 +12,7 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.pomodoro.timer.MainActivity
+import com.pomodoro.timer.core.ColorTheme
 import com.pomodoro.timer.core.DailyGoalProgress
 import com.pomodoro.timer.core.DailyGoalTracker
 import com.pomodoro.timer.core.NotificationChannels
@@ -56,6 +57,7 @@ class TimerService : Service() {
         const val EXTRA_NOTIFICATIONS_ENABLED = "extra_notifications_enabled"
         const val EXTRA_VIBRATION_ENABLED = "extra_vibration_enabled"
         const val EXTRA_USE_ALARM_SOUND = "extra_use_alarm_sound"
+        const val EXTRA_COLOR_THEME = "extra_color_theme"
 
         private const val CHANNEL_ID = "pomodoro_timer_channel"
         private const val ONGOING_NOTIFICATION_ID = 1
@@ -91,6 +93,7 @@ class TimerService : Service() {
         private var notificationsEnabled: Boolean = true
         private var vibrationEnabled: Boolean = true
         private var useAlarmSound: Boolean = false
+        private var colorTheme: ColorTheme = ColorTheme.DEFAULT
     }
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -126,6 +129,7 @@ class TimerService : Service() {
         notificationsEnabled = payload.notificationsEnabled
         vibrationEnabled = payload.vibrationEnabled
         useAlarmSound = payload.useAlarmSound
+        colorTheme = payload.colorTheme
         if (payload.dailyGoalDate.isNotEmpty()) {
             dailyGoalProgress = DailyGoalProgress(payload.dailyGoalDate, payload.dailyGoalCount)
             serviceScope.launch { settingsRepository.setDailyGoalProgress(payload.dailyGoalDate, payload.dailyGoalCount) }
@@ -156,7 +160,8 @@ class TimerService : Service() {
                 dailyGoalDate = dailyGoalProgress.date,
                 notificationsEnabled = notificationsEnabled,
                 vibrationEnabled = vibrationEnabled,
-                useAlarmSound = useAlarmSound
+                useAlarmSound = useAlarmSound,
+                colorTheme = colorTheme
             )
         )
     }
@@ -214,6 +219,8 @@ class TimerService : Service() {
                 notificationsEnabled = intent.getBooleanExtra(EXTRA_NOTIFICATIONS_ENABLED, true)
                 vibrationEnabled = intent.getBooleanExtra(EXTRA_VIBRATION_ENABLED, true)
                 useAlarmSound = intent.getBooleanExtra(EXTRA_USE_ALARM_SOUND, false)
+                colorTheme = ColorTheme.entries
+                    .firstOrNull { it.name == intent.getStringExtra(EXTRA_COLOR_THEME) } ?: ColorTheme.DEFAULT
                 engine.updateDurations(
                     focusMinutes * 60_000L,
                     breakMinutes * 60_000L,
