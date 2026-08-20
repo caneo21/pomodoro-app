@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.pomodoro.timer.core.ColorTheme
 import com.pomodoro.timer.core.DailyGoalProgress
 import com.pomodoro.timer.core.DailyGoalTracker
 import com.pomodoro.timer.core.TimerDefaults
@@ -31,6 +32,7 @@ class TimerSettingsRepository(private val dataStore: DataStore<Preferences>) {
         val NOTIFICATIONS_ENABLED_KEY = booleanPreferencesKey("notifications_enabled")
         val VIBRATION_ENABLED_KEY = booleanPreferencesKey("vibration_enabled")
         val USE_ALARM_SOUND_KEY = booleanPreferencesKey("use_alarm_sound")
+        val COLOR_THEME_KEY = stringPreferencesKey("color_theme")
         const val DEFAULT_FOCUS_MINUTES = TimerDefaults.DEFAULT_FOCUS_MINUTES
         const val DEFAULT_BREAK_MINUTES = TimerDefaults.DEFAULT_BREAK_MINUTES
         const val MIN_FOCUS_MINUTES = TimerDefaults.MIN_FOCUS_MINUTES
@@ -61,7 +63,8 @@ class TimerSettingsRepository(private val dataStore: DataStore<Preferences>) {
             dailyGoalTarget = prefs[DAILY_GOAL_TARGET_KEY] ?: DEFAULT_DAILY_GOAL_TARGET,
             notificationsEnabled = prefs[NOTIFICATIONS_ENABLED_KEY] ?: true,
             vibrationEnabled = prefs[VIBRATION_ENABLED_KEY] ?: true,
-            useAlarmSound = prefs[USE_ALARM_SOUND_KEY] ?: false
+            useAlarmSound = prefs[USE_ALARM_SOUND_KEY] ?: false,
+            colorTheme = ColorTheme.entries.firstOrNull { it.name == prefs[COLOR_THEME_KEY] } ?: ColorTheme.DEFAULT
         )
     }
 
@@ -113,6 +116,10 @@ class TimerSettingsRepository(private val dataStore: DataStore<Preferences>) {
 
     suspend fun updateUseAlarmSound(enabled: Boolean) {
         dataStore.edit { it[USE_ALARM_SOUND_KEY] = enabled }
+    }
+
+    suspend fun updateColorTheme(theme: ColorTheme) {
+        dataStore.edit { it[COLOR_THEME_KEY] = theme.name }
     }
 
     val dailyGoalProgress: Flow<DailyGoalProgress> = dataStore.data.map { prefs ->

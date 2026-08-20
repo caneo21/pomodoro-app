@@ -3,6 +3,7 @@ package com.pomodoro.timer.settings
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import com.pomodoro.timer.core.ColorTheme
 import com.pomodoro.timer.core.DailyGoalProgress
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -237,5 +238,24 @@ class TimerSettingsRepositoryTest {
         repository.setDailyGoalProgress("2026-08-20", 5)
 
         assertEquals(DailyGoalProgress("2026-08-20", 5), repository.dailyGoalProgress.first())
+    }
+
+    @Test
+    fun `settings default to ColorTheme DEFAULT`() = runTest {
+        val repository = TimerSettingsRepository(newDataStore())
+
+        val settings = repository.settings.first()
+
+        assertEquals(ColorTheme.DEFAULT, settings.colorTheme)
+    }
+
+    @Test
+    fun `updateColorTheme persists each theme`() = runTest {
+        val repository = TimerSettingsRepository(newDataStore())
+
+        for (theme in ColorTheme.entries) {
+            repository.updateColorTheme(theme)
+            assertEquals(theme, repository.settings.first().colorTheme)
+        }
     }
 }

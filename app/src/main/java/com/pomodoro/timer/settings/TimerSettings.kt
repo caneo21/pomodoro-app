@@ -1,5 +1,6 @@
 package com.pomodoro.timer.settings
 
+import com.pomodoro.timer.core.ColorTheme
 import com.pomodoro.timer.core.TimerDefaults
 
 data class TimerSettings(
@@ -14,5 +15,6 @@ data class TimerSettings(
     val dailyGoalTarget: Int = TimerDefaults.DEFAULT_DAILY_GOAL_TARGET,
     val notificationsEnabled: Boolean = true,
     val vibrationEnabled: Boolean = true,
-    val useAlarmSound: Boolean = false
+    val useAlarmSound: Boolean = false,
+    val colorTheme: ColorTheme = ColorTheme.DEFAULT
 )
