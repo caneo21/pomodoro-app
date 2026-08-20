@@ -30,7 +30,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.pomodoro.timer.core.TimerPhase
 import com.pomodoro.timer.ui.TimerUiState
-import com.pomodoro.timer.ui.theme.PomodoroLongBreakAccent
+import androidx.compose.foundation.isSystemInDarkTheme
+import com.pomodoro.timer.ui.theme.paletteFor
 
 @Composable
 fun TimerScreen(
@@ -75,7 +76,11 @@ fun TimerScreen(
             CircularProgressIndicator(
                 progress = { progress },
                 modifier = Modifier.size(220.dp),
-                color = progressColorFor(uiState.phase, MaterialTheme.colorScheme.primary, PomodoroLongBreakAccent),
+                color = progressColorFor(
+                    uiState.phase,
+                    MaterialTheme.colorScheme.primary,
+                    paletteFor(uiState.colorTheme, isSystemInDarkTheme()).longBreakAccent
+                ),
                 strokeWidth = 8.dp
             )
             Text(

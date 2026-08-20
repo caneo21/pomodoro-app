@@ -5,21 +5,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
-
-private val LightColors = lightColorScheme(
-    primary = PomodoroPrimary,
-    onPrimary = PomodoroOnPrimary,
-    background = PomodoroBackground
-)
-
-private val DarkColors = darkColorScheme(
-    primary = PomodoroPrimary,
-    onPrimary = PomodoroOnPrimary
-)
+import com.pomodoro.timer.core.ColorTheme
 
 @Composable
-fun PomodoroTheme(content: @Composable () -> Unit) {
-    val colors = if (isSystemInDarkTheme()) DarkColors else LightColors
+fun PomodoroTheme(colorTheme: ColorTheme = ColorTheme.DEFAULT, content: @Composable () -> Unit) {
+    val darkTheme = isSystemInDarkTheme()
+    val palette = paletteFor(colorTheme, darkTheme)
+    val colors = if (darkTheme) {
+        darkColorScheme(primary = palette.primary, onPrimary = palette.onPrimary, background = palette.background)
+    } else {
+        lightColorScheme(primary = palette.primary, onPrimary = palette.onPrimary, background = palette.background)
+    }
     MaterialTheme(
         colorScheme = colors,
         typography = PomodoroTypography,
