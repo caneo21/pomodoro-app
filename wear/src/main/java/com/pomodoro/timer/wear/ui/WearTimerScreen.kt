@@ -25,7 +25,7 @@ import androidx.wear.compose.material.CircularProgressIndicator
 import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.Text
 import com.pomodoro.timer.core.TimerPhase
-import com.pomodoro.timer.wear.theme.PomodoroWearLongBreakAccent
+import com.pomodoro.timer.wear.theme.wearPaletteFor
 
 @Composable
 fun WearTimerScreen(
@@ -70,7 +70,11 @@ fun WearTimerScreen(
             CircularProgressIndicator(
                 progress = progress,
                 modifier = Modifier.size(120.dp),
-                indicatorColor = progressColorFor(uiState.phase, MaterialTheme.colors.primary, PomodoroWearLongBreakAccent)
+                indicatorColor = progressColorFor(
+                    uiState.phase,
+                    MaterialTheme.colors.primary,
+                    wearPaletteFor(uiState.colorTheme).longBreakAccent
+                )
             )
             Text(text = remainingText, style = MaterialTheme.typography.title2)
         }

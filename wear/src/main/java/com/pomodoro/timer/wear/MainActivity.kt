@@ -53,9 +53,9 @@ class MainActivity : ComponentActivity() {
         lifecycle.addObserver(ambientObserver)
 
         setContent {
-            PomodoroWearTheme {
+            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            PomodoroWearTheme(colorTheme = uiState.colorTheme) {
                 Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colors.background)) {
-                    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
                     val ambient by isAmbient
                     WearTimerScreen(
                         uiState = uiState,
