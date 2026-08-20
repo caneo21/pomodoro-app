@@ -1,5 +1,6 @@
 package com.pomodoro.timer.wear.ui
 
+import com.pomodoro.timer.core.ColorTheme
 import com.pomodoro.timer.core.TimerPhase
 import com.pomodoro.timer.core.TimerState
 import org.junit.Assert.assertEquals
@@ -39,5 +40,14 @@ class WearTimerUiStateTest {
         assertEquals(TimerPhase.LONG_BREAK, uiState.phase)
         assertEquals(4, uiState.completedPomodoros)
         assertEquals(4, uiState.pomodorosUntilLongBreak)
+    }
+
+    @Test
+    fun `buildWearUiState carries colorTheme through`() {
+        val timer = TimerState(phase = TimerPhase.FOCUS, isRunning = false, remainingMillis = 1_500_000L, totalMillis = 1_500_000L)
+
+        val uiState = buildWearUiState(timer, pomodorosUntilLongBreak = 4, colorTheme = ColorTheme.LAVENDER)
+
+        assertEquals(ColorTheme.LAVENDER, uiState.colorTheme)
     }
 }

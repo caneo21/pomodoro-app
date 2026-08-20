@@ -13,6 +13,7 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.wear.ongoing.OngoingActivity
 import androidx.wear.ongoing.Status
+import com.pomodoro.timer.core.ColorTheme
 import com.pomodoro.timer.core.DailyGoalProgress
 import com.pomodoro.timer.core.DailyGoalTracker
 import com.pomodoro.timer.core.NotificationChannels
@@ -98,6 +99,11 @@ class WearTimerService : Service() {
         private var notificationsEnabled: Boolean = true
         private var vibrationEnabled: Boolean = true
         private var useAlarmSound: Boolean = false
+
+        // Exposed publicly (unlike _autoStartBreak/_dailyGoalEnabled above): the watch's own theme
+        // rendering needs this value, the same reason pomodorosUntilLongBreak is a StateFlow.
+        private val _colorTheme = MutableStateFlow(ColorTheme.DEFAULT)
+        val colorTheme: StateFlow<ColorTheme> = _colorTheme.asStateFlow()
     }
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -131,6 +137,7 @@ class WearTimerService : Service() {
         notificationsEnabled = payload.notificationsEnabled
         vibrationEnabled = payload.vibrationEnabled
         useAlarmSound = payload.useAlarmSound
+        _colorTheme.value = payload.colorTheme
         _state.value = engine.adoptRemote(payload, System.currentTimeMillis())
         if (_state.value.isRunning) startTicker() else stopTicker()
         updateOngoingNotification(_state.value)
@@ -196,7 +203,8 @@ class WearTimerService : Service() {
                 dailyGoalDate = dailyGoalProgress.date,
                 notificationsEnabled = notificationsEnabled,
                 vibrationEnabled = vibrationEnabled,
-                useAlarmSound = useAlarmSound
+                useAlarmSound = useAlarmSound,
+                colorTheme = _colorTheme.value
             )
         )
     }

@@ -1,6 +1,7 @@
 package com.pomodoro.timer.wear.ui
 
 import androidx.lifecycle.viewModelScope
+import com.pomodoro.timer.core.ColorTheme
 import com.pomodoro.timer.core.TimerPhase
 import com.pomodoro.timer.core.TimerState
 import com.pomodoro.timer.wear.timer.WearTimerService
@@ -41,9 +42,10 @@ class WearTimerViewModelTest {
     private fun newViewModel(
         timerState: StateFlow<TimerState>,
         pomodorosUntilLongBreak: StateFlow<Int> = MutableStateFlow(4),
+        colorTheme: StateFlow<ColorTheme> = MutableStateFlow(ColorTheme.DEFAULT),
         onCommand: (String) -> Unit = {}
     ): WearTimerViewModel =
-        WearTimerViewModel(timerState, pomodorosUntilLongBreak, onCommand).also { createdViewModels.add(it) }
+        WearTimerViewModel(timerState, pomodorosUntilLongBreak, colorTheme, onCommand).also { createdViewModels.add(it) }
 
     @Test
     fun `uiState reflects the injected timer state`() = runTest(dispatcher) {
