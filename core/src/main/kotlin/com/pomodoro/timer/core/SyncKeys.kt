@@ -22,4 +22,5 @@ object SyncKeys {
     const val KEY_NOTIFICATIONS_ENABLED = "notificationsEnabled"
     const val KEY_VIBRATION_ENABLED = "vibrationEnabled"
     const val KEY_USE_ALARM_SOUND = "useAlarmSound"
+    const val KEY_COLOR_THEME = "colorTheme"
 }

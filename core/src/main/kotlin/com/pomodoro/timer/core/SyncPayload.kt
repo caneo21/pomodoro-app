@@ -26,5 +26,6 @@ data class SyncPayload(
     val dailyGoalDate: String = "",
     val notificationsEnabled: Boolean = true,
     val vibrationEnabled: Boolean = true,
-    val useAlarmSound: Boolean = false
+    val useAlarmSound: Boolean = false,
+    val colorTheme: ColorTheme = ColorTheme.DEFAULT
 )
