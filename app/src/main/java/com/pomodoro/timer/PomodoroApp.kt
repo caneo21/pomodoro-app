@@ -18,6 +18,14 @@ private object Routes {
     const val ONBOARDING = "onboarding"
 }
 
+internal sealed interface OnboardingFinishAction {
+    data object CompleteAndShowTimer : OnboardingFinishAction
+    data object ReturnToSettings : OnboardingFinishAction
+}
+
+internal fun onboardingFinishAction(isFirstRun: Boolean): OnboardingFinishAction =
+    if (isFirstRun) OnboardingFinishAction.CompleteAndShowTimer else OnboardingFinishAction.ReturnToSettings
+
 @Composable
 fun PomodoroApp(viewModel: TimerViewModel) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -81,13 +89,19 @@ fun PomodoroApp(viewModel: TimerViewModel) {
         composable(Routes.ONBOARDING) {
             OnboardingScreen(
                 onFinish = {
-                    if (startedWithoutOnboarding) {
-                        viewModel.completeOnboarding()
-                        navController.navigate(Routes.TIMER) {
-                            popUpTo(Routes.ONBOARDING) { inclusive = true }
+                    // First-run onboarding is the start destination and has nothing beneath it on
+                    // the back stack; a replay launched from Settings always does. This must be read
+                    // here, at click time -- startedWithoutOnboarding above answers a different
+                    // question (which destination this session started on) and goes stale the moment
+                    // completeOnboarding() flips the flag, so it must never be reused for this decision.
+                    when (onboardingFinishAction(isFirstRun = navController.previousBackStackEntry == null)) {
+                        OnboardingFinishAction.CompleteAndShowTimer -> {
+                            viewModel.completeOnboarding()
+                            navController.navigate(Routes.TIMER) {
+                                popUpTo(Routes.ONBOARDING) { inclusive = true }
+                            }
                         }
-                    } else {
-                        navController.popBackStack()
+                        OnboardingFinishAction.ReturnToSettings -> navController.popBackStack()
                     }
                 }
             )
