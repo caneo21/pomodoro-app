@@ -254,4 +254,18 @@ class TimerViewModelTest {
         assertEquals(false, updated?.vibrationEnabled)
         assertEquals(true, updated?.useAlarmSound)
     }
+
+    @Test
+    fun `completeOnboarding persists through the repository`() = runTest(dispatcher) {
+        val timerState = MutableStateFlow(
+            TimerState(TimerPhase.FOCUS, isRunning = false, remainingMillis = 1_500_000L, totalMillis = 1_500_000L)
+        )
+        val viewModel = newViewModel(timerState)
+
+        viewModel.completeOnboarding()
+
+        val uiState = viewModel.uiState.first { it.onboardingCompleted }
+
+        assertEquals(true, uiState.onboardingCompleted)
+    }
 }

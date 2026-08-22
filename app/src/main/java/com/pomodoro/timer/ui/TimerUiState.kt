@@ -24,7 +24,9 @@ data class TimerUiState(
     val notificationsEnabled: Boolean = true,
     val vibrationEnabled: Boolean = true,
     val useAlarmSound: Boolean = false,
-    val colorTheme: ColorTheme = ColorTheme.DEFAULT
+    val colorTheme: ColorTheme = ColorTheme.DEFAULT,
+    val onboardingCompleted: Boolean = false,
+    val settingsLoaded: Boolean = false
 )
 
 fun buildUiState(timer: TimerState, settings: TimerSettings): TimerUiState = TimerUiState(
@@ -45,5 +47,7 @@ fun buildUiState(timer: TimerState, settings: TimerSettings): TimerUiState = Tim
     notificationsEnabled = settings.notificationsEnabled,
     vibrationEnabled = settings.vibrationEnabled,
     useAlarmSound = settings.useAlarmSound,
-    colorTheme = settings.colorTheme
+    colorTheme = settings.colorTheme,
+    onboardingCompleted = settings.onboardingCompleted,
+    settingsLoaded = true
 )

@@ -112,4 +112,20 @@ class TimerUiStateTest {
 
         assertEquals(ColorTheme.OCEAN, uiState.colorTheme)
     }
+
+    @Test
+    fun `buildUiState carries onboardingCompleted through and marks settingsLoaded true`() {
+        val timer = TimerState(phase = TimerPhase.FOCUS, isRunning = false, remainingMillis = 1_500_000L, totalMillis = 1_500_000L)
+        val settings = TimerSettings(focusMinutes = 25, breakMinutes = 5, onboardingCompleted = true)
+
+        val uiState = buildUiState(timer, settings)
+
+        assertEquals(true, uiState.onboardingCompleted)
+        assertEquals(true, uiState.settingsLoaded)
+    }
+
+    @Test
+    fun `a bare TimerUiState defaults settingsLoaded to false`() {
+        assertEquals(false, TimerUiState().settingsLoaded)
+    }
 }

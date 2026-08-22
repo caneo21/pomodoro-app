@@ -95,6 +95,10 @@ class TimerViewModel(
         viewModelScope.launch { settingsRepository.updateColorTheme(theme) }
     }
 
+    fun completeOnboarding() {
+        viewModelScope.launch { settingsRepository.updateOnboardingCompleted(true) }
+    }
+
     class Factory(private val appContext: Context) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
