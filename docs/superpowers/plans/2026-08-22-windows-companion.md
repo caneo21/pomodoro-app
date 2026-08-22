@@ -2832,8 +2832,8 @@ Expected: build succeeds and an `.msix` file is produced under `PomodoroWindows\
 3. 리셋 → returns to idle 집중/25:00.
 4. Settings: drag 집중 시간 to 5, 뒤로 → timer page shows 05:00.
 5. Turn on 자동으로 휴식 시작, start a session, let it run past the (now 5-minute) focus duration → transitions to 휴식 automatically, still running.
-6. Turn off notifications in Settings, let a phase end → no toast appears. Turn notifications back on, let another phase end → toast titled per `NotificationContent.SessionEndTitle` appears.
-7. Turn on 일일 목표 사용 with target 1, complete one focus session → toast "오늘의 목표 1개를 달성했어요!" appears.
+6. Turn off notifications in Settings, let a phase end → no toast appears. Turn notifications back on, let another phase end → toast titled per `NotificationContent.SessionEndTitle` appears. (Note: `AppNotificationManager.Default.Register()`/`.Show()` are wrapped in try/catch as of Task 12 — if this machine's install doesn't grant full notification-platform trust, e.g. a loose dev-mode sideload rather than a proper MSIX install, toasts silently no-op instead of crashing, and this step just won't show anything. That's expected in that specific scenario, not a bug; a normal signed/installed `.msix` from Step 2 should have full trust and show toasts normally.)
+7. Turn on 일일 목표 사용 with target 1, complete one focus session → toast "오늘의 목표 1개를 달성했어요!" appears. (Same caveat as Step 6.)
 8. Pick each of the 4 theme swatches in Settings → timer ring/background color changes to match `Palettes`.
 9. Turn on 화면 꺼짐 방지, start a session, confirm via `powercfg /requests` that display sleep is blocked; pause and confirm it's no longer blocked.
 10. Close the window (X) while a session is running → window hides, tray icon remains, `Get-Process PomodoroWindows` still shows the process; wait past a phase boundary → toast still fires while hidden.
