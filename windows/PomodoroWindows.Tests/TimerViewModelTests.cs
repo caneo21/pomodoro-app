@@ -106,6 +106,46 @@ public class TimerViewModelTests
     }
 
     [Fact]
+    public void Daily_goal_reached_toast_is_suppressed_when_notifications_are_disabled()
+    {
+        var notifications = new FakeNotificationService();
+        var settingsStore = new FakeSettingsStore();
+        var vm = CreateViewModel(
+            settingsStore, notifications,
+            new TimerSettings(FocusMinutes: 25, BreakMinutes: 5, AutoStartBreak: false,
+                DailyGoalEnabled: true, DailyGoalTarget: 1, NotificationsEnabled: false));
+        var t0 = DateTimeOffset.FromUnixTimeMilliseconds(0);
+        vm.StartPauseCommand.Execute(t0);
+
+        vm.Tick(t0.AddMilliseconds(25 * 60_000L + 1_000L));
+
+        Assert.Equal(1, vm.DailyGoalCount);
+        Assert.Empty(notifications.DailyGoalReachedCalls);
+    }
+
+    [Fact]
+    public void A_tick_that_crosses_two_phase_boundaries_still_credits_the_completed_focus_session()
+    {
+        var notifications = new FakeNotificationService();
+        var settingsStore = new FakeSettingsStore();
+        var vm = CreateViewModel(
+            settingsStore, notifications,
+            new TimerSettings(FocusMinutes: 25, BreakMinutes: 5, PomodorosUntilLongBreak: 100,
+                AutoStartBreak: true, AutoStartFocus: true, DailyGoalEnabled: true, DailyGoalTarget: 1));
+        var t0 = DateTimeOffset.FromUnixTimeMilliseconds(0);
+        vm.StartPauseCommand.Execute(t0);
+
+        // 25 min (Focus -> ShortBreak boundary) + 5 min (ShortBreak -> Focus boundary) + 1s: lands
+        // back in Focus, so a phase-only comparison would see no change and miss the completion.
+        vm.Tick(t0.AddMilliseconds(30 * 60_000L + 1_000L));
+
+        Assert.Equal(TimerPhase.Focus, vm.Phase);
+        Assert.Equal(1, vm.CompletedPomodoros);
+        Assert.Equal(1, vm.DailyGoalCount);
+        Assert.Equal(new[] { 1 }, notifications.DailyGoalReachedCalls);
+    }
+
+    [Fact]
     public void ApplySettings_updates_idle_remaining_time_to_the_new_focus_duration()
     {
         var vm = CreateViewModel(initialSettings: new TimerSettings(FocusMinutes: 25, BreakMinutes: 5));

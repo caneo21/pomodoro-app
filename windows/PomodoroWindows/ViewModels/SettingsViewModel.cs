@@ -45,10 +45,14 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     public void Save()
     {
+        // Daily-goal progress is owned by TimerViewModel, not by this page's controls; re-read it
+        // fresh so an unrelated settings change here doesn't clobber same-day progress with defaults.
+        var current = _settingsStore.Load();
         var settings = new TimerSettings(
             FocusMinutes, BreakMinutes, LongBreakMinutes, PomodorosUntilLongBreak,
             AutoStartBreak, AutoStartFocus, KeepScreenOn, DailyGoalEnabled, DailyGoalTarget,
-            NotificationsEnabled, UseAlarmSound, ColorTheme);
+            NotificationsEnabled, UseAlarmSound, ColorTheme,
+            current.DailyGoalDate, current.DailyGoalCount);
         _settingsStore.Save(settings);
         _timerViewModel.ApplySettings(settings);
     }

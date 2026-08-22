@@ -14,4 +14,6 @@ public sealed record TimerSettings(
     int DailyGoalTarget = TimerDefaults.DefaultDailyGoalTarget,
     bool NotificationsEnabled = true,
     bool UseAlarmSound = false,
-    ColorTheme ColorTheme = ColorTheme.Default);
+    ColorTheme ColorTheme = ColorTheme.Default,
+    string DailyGoalDate = "",
+    int DailyGoalCount = 0);

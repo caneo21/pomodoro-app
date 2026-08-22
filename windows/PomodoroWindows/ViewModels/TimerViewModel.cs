@@ -34,7 +34,12 @@ public sealed partial class TimerViewModel : ObservableObject
             _settings.PomodorosUntilLongBreak,
             _settings.AutoStartBreak,
             _settings.AutoStartFocus);
-        ApplyState(_engine.CurrentState(0L));
+        if (!string.IsNullOrEmpty(_settings.DailyGoalDate))
+        {
+            _dailyGoalProgress = new DailyGoalProgress(_settings.DailyGoalDate, _settings.DailyGoalCount);
+            DailyGoalCount = _settings.DailyGoalCount;
+        }
+        ApplyState(_engine.CurrentState(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
     }
 
     [RelayCommand]
@@ -48,7 +53,7 @@ public sealed partial class TimerViewModel : ObservableObject
     [RelayCommand]
     private void Reset()
     {
-        ApplyState(_engine.Reset(0L));
+        ApplyState(_engine.Reset(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
     }
 
     public void Tick(DateTimeOffset now)
@@ -59,28 +64,31 @@ public sealed partial class TimerViewModel : ObservableObject
         var next = _engine.Tick(now.ToUnixTimeMilliseconds());
         ApplyState(next);
 
-        if (next.Phase != previousPhase)
+        if (next.Phase != previousPhase && _settings.NotificationsEnabled)
         {
-            if (_settings.NotificationsEnabled)
-            {
-                _notificationService.NotifySessionEnd(next.Phase);
-            }
-            if (previousPhase == TimerPhase.Focus)
-            {
-                RecordDailyGoalCompletion();
-            }
+            _notificationService.NotifySessionEnd(next.Phase);
+        }
+
+        // Compare CompletedPomodoros rather than the phase, so a tick that silently crosses more than
+        // one boundary in a single call (e.g. after a sleep/hibernate gap) still credits the completed
+        // focus session instead of losing it because the phase happened to land back where it started.
+        if (next.CompletedPomodoros != previousCompleted)
+        {
+            RecordDailyGoalCompletion();
         }
     }
 
     private void RecordDailyGoalCompletion()
     {
-        var today = DateTimeOffset.UtcNow.ToString("yyyy-MM-dd");
+        var today = DateTimeOffset.Now.ToString("yyyy-MM-dd");
         var previous = DailyGoalTracker.ForToday(_dailyGoalProgress, today);
         var updated = DailyGoalTracker.RecordCompletion(_dailyGoalProgress, today);
         _dailyGoalProgress = updated;
         DailyGoalCount = updated.Count;
+        _settings = _settings with { DailyGoalDate = updated.Date, DailyGoalCount = updated.Count };
+        _settingsStore.Save(_settings);
 
-        if (_settings.DailyGoalEnabled &&
+        if (_settings.DailyGoalEnabled && _settings.NotificationsEnabled &&
             DailyGoalTracker.JustReachedGoal(previous.Count, updated.Count, _settings.DailyGoalTarget))
         {
             _notificationService.NotifyDailyGoalReached(_settings.DailyGoalTarget);

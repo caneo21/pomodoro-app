@@ -23,7 +23,9 @@ public sealed class ApplicationDataSettingsStore : ISettingsStore
             DailyGoalTarget: GetInt(nameof(TimerSettings.DailyGoalTarget), defaults.DailyGoalTarget),
             NotificationsEnabled: GetBool(nameof(TimerSettings.NotificationsEnabled), defaults.NotificationsEnabled),
             UseAlarmSound: GetBool(nameof(TimerSettings.UseAlarmSound), defaults.UseAlarmSound),
-            ColorTheme: (ColorTheme)GetInt(nameof(TimerSettings.ColorTheme), (int)defaults.ColorTheme));
+            ColorTheme: (ColorTheme)GetInt(nameof(TimerSettings.ColorTheme), (int)defaults.ColorTheme),
+            DailyGoalDate: GetString(nameof(TimerSettings.DailyGoalDate), defaults.DailyGoalDate),
+            DailyGoalCount: GetInt(nameof(TimerSettings.DailyGoalCount), defaults.DailyGoalCount));
     }
 
     public void Save(TimerSettings settings)
@@ -40,6 +42,8 @@ public sealed class ApplicationDataSettingsStore : ISettingsStore
         _container.Values[nameof(TimerSettings.NotificationsEnabled)] = settings.NotificationsEnabled;
         _container.Values[nameof(TimerSettings.UseAlarmSound)] = settings.UseAlarmSound;
         _container.Values[nameof(TimerSettings.ColorTheme)] = (int)settings.ColorTheme;
+        _container.Values[nameof(TimerSettings.DailyGoalDate)] = settings.DailyGoalDate;
+        _container.Values[nameof(TimerSettings.DailyGoalCount)] = settings.DailyGoalCount;
     }
 
     private int GetInt(string key, int fallback) =>
@@ -47,4 +51,7 @@ public sealed class ApplicationDataSettingsStore : ISettingsStore
 
     private bool GetBool(string key, bool fallback) =>
         _container.Values.TryGetValue(key, out var value) && value is bool b ? b : fallback;
+
+    private string GetString(string key, string fallback) =>
+        _container.Values.TryGetValue(key, out var value) && value is string s ? s : fallback;
 }
