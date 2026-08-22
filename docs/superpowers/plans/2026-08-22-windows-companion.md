@@ -22,6 +22,20 @@
   $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
   ```
   (harmless no-op once a fresh shell already has `dotnet` on PATH).
+- **Solution-level build/test commands must NOT pass `-p:Platform=x64`.** `PomodoroWindows.sln`'s solution-configuration map only declares `Debug|Any CPU`/`Release|Any CPU` (routed per-project to `x64` via `ProjectConfigurationPlatforms.ActiveCfg`, standard `dotnet sln add` output for a `Platforms=x64;arm64`-only project) — forcing `-p:Platform=x64` on a bare `dotnet build`/`dotnet test` (no project path) breaks that routing with `MSB4126`. Use plain `dotnet build` / `dotnet test` when invoking at the solution level (no project argument); keep `-p:Platform=x64` only on commands that target a specific `.csproj` directly (e.g. `dotnet build PomodoroWindows\PomodoroWindows.csproj ...`), where it's required and already correct throughout this plan.
+- **`dotnet test` against any project that references `PomodoroWindows.csproj`** (i.e. `PomodoroWindows.Tests`) **requires two extra flags**: `-p:Platform=x64 -p:WindowsAppSdkDeploymentManagerInitialize=false`. Without the first, the build fails (`PomodoroWindows.csproj` has no AnyCPU config). Without the second, every test throws `COMException (REGDB_E_CLASSNOTREG)` from a Windows App SDK deployment-bootstrap module initializer baked into `PomodoroWindows.dll` (triggered by its `WindowsPackageType=MSIX`+`WinExe` config) that fires on any assembly load outside a packaged/deployed app — including the xUnit test host. This does not affect `PomodoroWindows.Core.Tests` (pure class library, no WindowsAppSDK dependency) — its bare `dotnet test` commands elsewhere in this plan are unaffected. Full form: `dotnet test PomodoroWindows.Tests\PomodoroWindows.Tests.csproj -p:Platform=x64 -p:WindowsAppSdkDeploymentManagerInitialize=false -p:Platform=x64 -p:WindowsAppSdkDeploymentManagerInitialize=false`.
+- **`dotnet run --project ... -p:Platform=x64` does not work** for this multi-platform (`Platforms=x64;arm64`) packaged project — it looks for the exe under `bin\Debug\...` instead of the actual `bin\x64\Debug\...`, and even fixed, a `WindowsPackageType=MSIX` app needs package identity to activate its WinRT/WindowsAppSDK dependencies (plain exe launch fails with `REGDB_E_CLASSNOTREG`, the same underlying cause as the test-flag issue above). Wherever this plan's steps say "run the app" from the command line (not applicable to a human launching it from the Start Menu, which works normally), use this instead:
+  ```powershell
+  $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+  cd D:\make_pomodoro_app\windows
+  dotnet build PomodoroWindows\PomodoroWindows.csproj -c Debug -p:Platform=x64
+  Add-AppxPackage -Register PomodoroWindows\bin\x64\Debug\net8.0-windows10.0.19041.0\AppxManifest.xml
+  Start-Process shell:AppsFolder\PomodoroWindows_hqfn3qvq51sga!App
+  Start-Sleep -Seconds 3
+  Get-Process -Name PomodoroWindows -ErrorAction SilentlyContinue | Select-Object Id, MainWindowTitle
+  ```
+  (`PomodoroWindows_hqfn3qvq51sga` is this app's package family name, deterministic from `Package.appxmanifest`'s `Identity Name`/`Publisher` — stable across ordinary rebuilds. `Add-AppxPackage -Register` re-registers in place each time, so this is safe to repeat after every rebuild.) This requires Windows Developer Mode to be enabled (Settings → Privacy & Security → For Developers → Developer Mode) — already turned on for this machine as of Task 6.
+- **Implementer subagents cannot click buttons or read on-screen text** — they have no GUI interaction tool, only PowerShell process/window inspection. For Tasks 10-14's "manually verify" steps, an implementer's achievable verification is: build succeeds, the app registers and launches via the pattern above, `Get-Process` shows the expected `MainWindowTitle`, and the process doesn't crash within a few seconds. The deeper interaction checks each task's "Manually verify" prose describes (clicking buttons, reading updated text, toggling settings) are real requirements, but they are verified by the human user during Task 15's manual QA checklist, not by the implementer subagent — an implementer should say so explicitly in its report rather than claim it clicked anything.
 
 ---
 
@@ -1260,13 +1274,19 @@ Then re-run the Step 5 build command. `Package.appxmanifest`'s `Identity Publish
 
 - [ ] **Step 7: Run the app and verify a blank window titled "Pomodoro" opens**
 
+`dotnet run` does not work for this multi-platform packaged project — use the build+register+launch pattern from Global Constraints instead:
+
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 cd D:\make_pomodoro_app\windows
-dotnet run --project PomodoroWindows\PomodoroWindows.csproj -c Debug -p:Platform=x64
+dotnet build PomodoroWindows\PomodoroWindows.csproj -c Debug -p:Platform=x64
+Add-AppxPackage -Register PomodoroWindows\bin\x64\Debug\net8.0-windows10.0.19041.0\AppxManifest.xml
+Start-Process shell:AppsFolder\PomodoroWindows_hqfn3qvq51sga!App
+Start-Sleep -Seconds 3
+Get-Process -Name PomodoroWindows -ErrorAction SilentlyContinue | Select-Object Id, MainWindowTitle
 ```
 
-Expected: a window titled "Pomodoro" opens with an empty client area. Close it to end the process.
+Expected: a `PomodoroWindows` process is running with `MainWindowTitle` exactly `Pomodoro`. Then close it: `Stop-Process -Name PomodoroWindows -ErrorAction SilentlyContinue`. (This requires Windows Developer Mode to be enabled — see Global Constraints; if `Add-AppxPackage` fails with a developer-license error, stop and ask the user to enable it, per this plan's stop-and-ask policy for security-sensitive/admin-gated changes.)
 
 - [ ] **Step 8: Commit**
 
@@ -1595,7 +1615,7 @@ public class TimerViewModelTests
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 cd D:\make_pomodoro_app\windows
-dotnet test PomodoroWindows.Tests\PomodoroWindows.Tests.csproj
+dotnet test PomodoroWindows.Tests\PomodoroWindows.Tests.csproj -p:Platform=x64 -p:WindowsAppSdkDeploymentManagerInitialize=false
 ```
 
 Expected: build error, `TimerViewModel` not found.
@@ -1709,7 +1729,7 @@ public sealed partial class TimerViewModel : ObservableObject
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 cd D:\make_pomodoro_app\windows
-dotnet test PomodoroWindows.Tests\PomodoroWindows.Tests.csproj
+dotnet test PomodoroWindows.Tests\PomodoroWindows.Tests.csproj -p:Platform=x64 -p:WindowsAppSdkDeploymentManagerInitialize=false
 ```
 
 Expected: `Passed! - Failed: 0, Passed: 6`
@@ -1744,8 +1764,10 @@ public sealed class TimerTickService
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 cd D:\make_pomodoro_app\windows
-dotnet build -p:Platform=x64
+dotnet build
 ```
+
+(No `-p:Platform=x64` here — see Global Constraints: forcing it on a solution-level build breaks `PomodoroWindows.sln`'s per-project platform routing with `MSB4126`. Plain `dotnet build` uses the existing routing correctly.)
 
 Expected: `Build succeeded.`
 
@@ -1810,7 +1832,7 @@ public static class Palettes
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 cd D:\make_pomodoro_app\windows
-dotnet build -p:Platform=x64
+dotnet build
 ```
 
 Expected: `Build succeeded.`
@@ -1982,13 +2004,19 @@ public partial class App : Application
 
 - [ ] **Step 4: Build and run; verify manually**
 
+Use the build+register+launch pattern from Global Constraints (`dotnet run` doesn't work for this project):
+
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 cd D:\make_pomodoro_app\windows
-dotnet run --project PomodoroWindows\PomodoroWindows.csproj -c Debug -p:Platform=x64
+dotnet build PomodoroWindows\PomodoroWindows.csproj -c Debug -p:Platform=x64
+Add-AppxPackage -Register PomodoroWindows\bin\x64\Debug\net8.0-windows10.0.19041.0\AppxManifest.xml
+Start-Process shell:AppsFolder\PomodoroWindows_hqfn3qvq51sga!App
+Start-Sleep -Seconds 3
+Get-Process -Name PomodoroWindows -ErrorAction SilentlyContinue | Select-Object Id, MainWindowTitle
 ```
 
-Manually verify: window shows "집중" phase, "25:00" remaining, a "시작" button. Click 시작 — button becomes "일시정지" and the time counts down every second. Click 리셋 — returns to "25:00" and idle.
+An implementer subagent's achievable verification here: the process launches with `MainWindowTitle` "Pomodoro" and doesn't crash — then close it (`Stop-Process -Name PomodoroWindows -ErrorAction SilentlyContinue`). The full interaction check (시작 button toggling to 일시정지, the countdown actually ticking, 리셋 restoring "25:00") requires clicking the UI and is verified by the human user, not the implementer — see Global Constraints. State this limitation explicitly in the task report rather than claiming the click-through was observed.
 
 - [ ] **Step 5: Commit**
 
@@ -2109,7 +2137,7 @@ Append to `windows/PomodoroWindows.Tests/TimerViewModelTests.cs`:
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 cd D:\make_pomodoro_app\windows
-dotnet test PomodoroWindows.Tests\PomodoroWindows.Tests.csproj
+dotnet test PomodoroWindows.Tests\PomodoroWindows.Tests.csproj -p:Platform=x64 -p:WindowsAppSdkDeploymentManagerInitialize=false
 ```
 
 Expected: `Passed! - Failed: 0, Passed: 7`
@@ -2333,13 +2361,19 @@ public sealed partial class SettingsPage : Page
 
 - [ ] **Step 7: Build and run; verify manually**
 
+Use the build+register+launch pattern from Global Constraints:
+
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 cd D:\make_pomodoro_app\windows
-dotnet run --project PomodoroWindows\PomodoroWindows.csproj -c Debug -p:Platform=x64
+dotnet build PomodoroWindows\PomodoroWindows.csproj -c Debug -p:Platform=x64
+Add-AppxPackage -Register PomodoroWindows\bin\x64\Debug\net8.0-windows10.0.19041.0\AppxManifest.xml
+Start-Process shell:AppsFolder\PomodoroWindows_hqfn3qvq51sga!App
+Start-Sleep -Seconds 3
+Get-Process -Name PomodoroWindows -ErrorAction SilentlyContinue | Select-Object Id, MainWindowTitle
 ```
 
-Manually verify: click 설정 on the timer page, opens settings; drag 집중 시간 slider to 10, click 뒤로, timer page now shows 10:00 idle. Toggle theme swatches — confirm no crash (visual theme wiring finishes in Task 9's placeholder replacement below).
+An implementer subagent's achievable verification: launches with `MainWindowTitle` "Pomodoro", doesn't crash — then close it. The full interaction check (설정 navigation, slider drag, theme swatch tap) requires clicking the UI and is verified by the human user, not the implementer — see Global Constraints.
 
 - [ ] **Step 8: Replace Task 10's hardcoded `ColorTheme.Default`/`darkTheme: false` in `TimerPage.xaml.cs` with the live setting**
 
@@ -2383,11 +2417,15 @@ Turn on 일일 목표 사용 in Settings with target 3, go back to the timer pag
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 cd D:\make_pomodoro_app\windows
-dotnet test PomodoroWindows.Tests\PomodoroWindows.Tests.csproj
-dotnet run --project PomodoroWindows\PomodoroWindows.csproj -c Debug -p:Platform=x64
+dotnet test PomodoroWindows.Tests\PomodoroWindows.Tests.csproj -p:Platform=x64 -p:WindowsAppSdkDeploymentManagerInitialize=false
+dotnet build PomodoroWindows\PomodoroWindows.csproj -c Debug -p:Platform=x64
+Add-AppxPackage -Register PomodoroWindows\bin\x64\Debug\net8.0-windows10.0.19041.0\AppxManifest.xml
+Start-Process shell:AppsFolder\PomodoroWindows_hqfn3qvq51sga!App
+Start-Sleep -Seconds 3
+Get-Process -Name PomodoroWindows -ErrorAction SilentlyContinue | Select-Object Id, MainWindowTitle
 ```
 
-Manually verify: pick "Ocean" swatch in Settings, go back — timer ring/background now uses the Ocean palette.
+An implementer subagent's achievable verification: tests pass, app launches with `MainWindowTitle` "Pomodoro", doesn't crash — then close it. The theme-swatch interaction check is verified by the human user, not the implementer — see Global Constraints.
 
 - [ ] **Step 10: Commit**
 
@@ -2465,14 +2503,19 @@ Add `using Microsoft.Windows.AppNotifications;` and `using PomodoroWindows.Servi
 
 - [ ] **Step 3: Build and run; verify manually**
 
+Use the build+register+launch pattern from Global Constraints:
+
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 cd D:\make_pomodoro_app\windows
-dotnet build -p:Platform=x64
-dotnet run --project PomodoroWindows\PomodoroWindows.csproj -c Debug -p:Platform=x64
+dotnet build PomodoroWindows\PomodoroWindows.csproj -c Debug -p:Platform=x64
+Add-AppxPackage -Register PomodoroWindows\bin\x64\Debug\net8.0-windows10.0.19041.0\AppxManifest.xml
+Start-Process shell:AppsFolder\PomodoroWindows_hqfn3qvq51sga!App
+Start-Sleep -Seconds 3
+Get-Process -Name PomodoroWindows -ErrorAction SilentlyContinue | Select-Object Id, MainWindowTitle
 ```
 
-Manually verify: set 집중 시간 to 5분 (its minimum), start the timer, wait 5 minutes (or temporarily lower `TimerDefaults.MinFocusMinutes` locally for a faster manual check, then revert) — a Windows toast notification titled "휴식 시간입니다!" appears.
+An implementer subagent's achievable verification: launches with `MainWindowTitle` "Pomodoro", doesn't crash — then close it. Triggering an actual session-end toast requires clicking 시작 and waiting out a real focus duration (or a temporary local edit to `TimerDefaults.MinFocusMinutes` to shorten it, reverted after), which needs UI interaction beyond what an implementer subagent can do — the human user verifies this in Task 15's manual QA checklist (see Global Constraints).
 
 - [ ] **Step 4: Commit**
 
@@ -2621,14 +2664,19 @@ Add `using PomodoroWindows.Services;` if not already present (it is, from Task 8
 
 - [ ] **Step 5: Build and run; verify manually**
 
+Use the build+register+launch pattern from Global Constraints:
+
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 cd D:\make_pomodoro_app\windows
-dotnet build -p:Platform=x64
-dotnet run --project PomodoroWindows\PomodoroWindows.csproj -c Debug -p:Platform=x64
+dotnet build PomodoroWindows\PomodoroWindows.csproj -c Debug -p:Platform=x64
+Add-AppxPackage -Register PomodoroWindows\bin\x64\Debug\net8.0-windows10.0.19041.0\AppxManifest.xml
+Start-Process shell:AppsFolder\PomodoroWindows_hqfn3qvq51sga!App
+Start-Sleep -Seconds 3
+Get-Process -Name PomodoroWindows -ErrorAction SilentlyContinue | Select-Object Id, MainWindowTitle
 ```
 
-Manually verify: start the timer, close the window with X — window disappears but process keeps running (check Task Manager) and a tray icon appears. Right-click tray icon → 시작/일시정지 pauses the (invisible) timer. Left-click tray icon → window reappears showing the paused state. Right-click → 종료 fully exits the process.
+An implementer subagent's achievable verification: launches with `MainWindowTitle` "Pomodoro", doesn't crash — then close it (`Stop-Process -Name PomodoroWindows -ErrorAction SilentlyContinue`). The full interaction check (clicking X to minimize to tray, process surviving with the window gone, tray menu clicks) requires UI interaction beyond what an implementer subagent can do — the human user verifies this in Task 15's manual QA checklist (see Global Constraints).
 
 - [ ] **Step 6: Commit**
 
@@ -2697,14 +2745,19 @@ Add `using System.ComponentModel;` if needed for the event signature (usually in
 
 - [ ] **Step 3: Build and run; verify manually**
 
+Use the build+register+launch pattern from Global Constraints:
+
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 cd D:\make_pomodoro_app\windows
-dotnet build -p:Platform=x64
-dotnet run --project PomodoroWindows\PomodoroWindows.csproj -c Debug -p:Platform=x64
+dotnet build PomodoroWindows\PomodoroWindows.csproj -c Debug -p:Platform=x64
+Add-AppxPackage -Register PomodoroWindows\bin\x64\Debug\net8.0-windows10.0.19041.0\AppxManifest.xml
+Start-Process shell:AppsFolder\PomodoroWindows_hqfn3qvq51sga!App
+Start-Sleep -Seconds 3
+Get-Process -Name PomodoroWindows -ErrorAction SilentlyContinue | Select-Object Id, MainWindowTitle
 ```
 
-Manually verify: turn on 화면 꺼짐 방지 in Settings, start the timer, run `powercfg /requests` in a separate elevated PowerShell — `PomodoroWindows.exe` should appear under `DISPLAY:`. Pause the timer — the entry disappears.
+An implementer subagent's achievable verification: launches with `MainWindowTitle` "Pomodoro", doesn't crash — then close it. The full check (toggling 화면 꺼짐 방지, starting the timer via UI, then confirming via an *elevated* `powercfg /requests` that `PomodoroWindows.exe` appears under `DISPLAY:` while running and disappears when paused) requires UI interaction and admin elevation beyond what an implementer subagent can do — the human user verifies this in Task 15's manual QA checklist (see Global Constraints).
 
 - [ ] **Step 4: Commit**
 
@@ -2721,13 +2774,16 @@ git commit -m "feat: prevent display sleep while a session is running and keepSc
 
 - [ ] **Step 1: Run the full automated test suite**
 
+Run each test project explicitly rather than a solution-wide `dotnet test` — `PomodoroWindows.csproj`'s `Platforms=x64;arm64`-only config (see Global Constraints) means a bare solution-level `dotnet test` fails at the build step before any tests run:
+
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 cd D:\make_pomodoro_app\windows
-dotnet test
+dotnet test PomodoroWindows.Core.Tests\PomodoroWindows.Core.Tests.csproj
+dotnet test PomodoroWindows.Tests\PomodoroWindows.Tests.csproj -p:Platform=x64 -p:WindowsAppSdkDeploymentManagerInitialize=false
 ```
 
-Expected: all `PomodoroWindows.Core.Tests` and `PomodoroWindows.Tests` pass, 0 failures.
+Expected: `PomodoroWindows.Core.Tests` passes all 34 tests, `PomodoroWindows.Tests` passes all of its tests (7 as of Task 11), 0 failures in either.
 
 - [ ] **Step 2: Publish an MSIX package**
 
