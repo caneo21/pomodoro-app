@@ -19,7 +19,16 @@ public partial class App : Application
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
         var settingsStore = new ApplicationDataSettingsStore();
-        AppNotificationManager.Default.Register();
+        try
+        {
+            AppNotificationManager.Default.Register();
+        }
+        catch (Exception)
+        {
+            // Notification registration can fail depending on deployment mode (e.g. a dev-mode
+            // sideloaded MSIX without full notification-platform trust). Toasts silently become
+            // unavailable in that case; the rest of the app still works.
+        }
         var notificationService = new AppNotificationService(() => settingsStore.Load().UseAlarmSound);
         var timerViewModel = new TimerViewModel(settingsStore, notificationService);
 

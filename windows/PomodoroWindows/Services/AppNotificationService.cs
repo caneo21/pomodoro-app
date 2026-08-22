@@ -25,11 +25,19 @@ public sealed class AppNotificationService : INotificationService
 
     private void Send(string title)
     {
-        var builder = new AppNotificationBuilder().AddText(title);
-        if (_useAlarmSound())
+        try
         {
-            builder.SetAudioUri(new Uri("ms-winsoundevent:Notification.Looping.Alarm"));
+            var builder = new AppNotificationBuilder().AddText(title);
+            if (_useAlarmSound())
+            {
+                builder.SetAudioUri(new Uri("ms-winsoundevent:Notification.Looping.Alarm"));
+            }
+            AppNotificationManager.Default.Show(builder.BuildNotification());
         }
-        AppNotificationManager.Default.Show(builder.BuildNotification());
+        catch (Exception)
+        {
+            // Toast notification display can fail if registration failed or the notification platform
+            // is unavailable. Silently continue — the session/goal-reached event itself still occurred.
+        }
     }
 }
