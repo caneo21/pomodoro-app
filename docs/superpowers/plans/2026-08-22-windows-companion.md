@@ -27,7 +27,7 @@
 - **`dotnet run --project ... -p:Platform=x64` does not work** for this multi-platform (`Platforms=x64;arm64`) packaged project — it looks for the exe under `bin\Debug\...` instead of the actual `bin\x64\Debug\...`, and even fixed, a `WindowsPackageType=MSIX` app needs package identity to activate its WinRT/WindowsAppSDK dependencies (plain exe launch fails with `REGDB_E_CLASSNOTREG`, the same underlying cause as the test-flag issue above). Wherever this plan's steps say "run the app" from the command line (not applicable to a human launching it from the Start Menu, which works normally), use this instead:
   ```powershell
   $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-  cd D:\make_pomodoro_app\windows
+  cd D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows
   dotnet build PomodoroWindows\PomodoroWindows.csproj -c Debug -p:Platform=x64
   Add-AppxPackage -Register PomodoroWindows\bin\x64\Debug\net8.0-windows10.0.19041.0\AppxManifest.xml
   Start-Process shell:AppsFolder\PomodoroWindows_hqfn3qvq51sga!App
@@ -97,7 +97,7 @@ windows/
 
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-cd D:\make_pomodoro_app
+cd D:\make_pomodoro_app\.claude\worktrees\windows-companion
 mkdir windows
 cd windows
 dotnet new sln -n PomodoroWindows
@@ -110,7 +110,7 @@ dotnet sln add PomodoroWindows.Core\PomodoroWindows.Core.csproj
 
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-cd D:\make_pomodoro_app\windows
+cd D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows
 dotnet new xunit -n PomodoroWindows.Core.Tests -o PomodoroWindows.Core.Tests --framework net8.0
 Remove-Item PomodoroWindows.Core.Tests\UnitTest1.cs
 dotnet add PomodoroWindows.Core.Tests\PomodoroWindows.Core.Tests.csproj reference PomodoroWindows.Core\PomodoroWindows.Core.csproj
@@ -137,7 +137,7 @@ public class SmokeTest
 
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-cd D:\make_pomodoro_app\windows
+cd D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows
 dotnet test
 ```
 
@@ -252,7 +252,7 @@ public class TimerStateTests
 
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-cd D:\make_pomodoro_app\windows
+cd D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows
 dotnet test
 ```
 
@@ -366,7 +366,7 @@ public class DailyGoalTrackerTests
 
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-cd D:\make_pomodoro_app\windows
+cd D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows
 dotnet test
 ```
 
@@ -400,7 +400,7 @@ public static class DailyGoalTracker
 
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-cd D:\make_pomodoro_app\windows
+cd D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows
 dotnet test
 ```
 
@@ -478,7 +478,7 @@ public class NotificationContentTests
 
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-cd D:\make_pomodoro_app\windows
+cd D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows
 dotnet test
 ```
 
@@ -526,7 +526,7 @@ public static class NotificationContent
 
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-cd D:\make_pomodoro_app\windows
+cd D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows
 dotnet test
 ```
 
@@ -850,7 +850,7 @@ public class TimerEngineTests
 
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-cd D:\make_pomodoro_app\windows
+cd D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows
 dotnet test
 ```
 
@@ -1023,7 +1023,7 @@ public sealed class TimerEngine
 
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-cd D:\make_pomodoro_app\windows
+cd D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows
 dotnet test
 ```
 
@@ -1164,7 +1164,7 @@ WinUI 3 requires these five PNGs to exist and be referenced from `Package.appxma
 
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-cd D:\make_pomodoro_app\windows\PomodoroWindows
+cd D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows\PomodoroWindows
 mkdir Assets
 Add-Type -AssemblyName System.Drawing
 function New-PlaceholderPng($path, $w, $h) {
@@ -1254,7 +1254,7 @@ public sealed partial class MainWindow : Window
 
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-cd D:\make_pomodoro_app\windows
+cd D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows
 dotnet sln add PomodoroWindows\PomodoroWindows.csproj
 dotnet build PomodoroWindows\PomodoroWindows.csproj -c Debug -p:Platform=x64
 ```
@@ -1266,8 +1266,8 @@ Expected: `Build succeeded.` If it instead fails with a certificate/signing erro
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 $cert = New-SelfSignedCertificate -Type Custom -Subject "CN=PomodoroWindowsDev" -KeyUsage DigitalSignature -FriendlyName "PomodoroWindows Dev Cert" -CertStoreLocation "Cert:\CurrentUser\My" -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3","2.5.29.19={text}Subject Type:End Entity")
-Export-Certificate -Cert $cert -FilePath "D:\make_pomodoro_app\windows\PomodoroWindows\PomodoroWindowsDev.cer"
-Import-Certificate -FilePath "D:\make_pomodoro_app\windows\PomodoroWindows\PomodoroWindowsDev.cer" -CertStoreLocation "Cert:\LocalMachine\TrustedPeople"
+Export-Certificate -Cert $cert -FilePath "D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows\PomodoroWindows\PomodoroWindowsDev.cer"
+Import-Certificate -FilePath "D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows\PomodoroWindows\PomodoroWindowsDev.cer" -CertStoreLocation "Cert:\LocalMachine\TrustedPeople"
 ```
 
 Then re-run the Step 5 build command. `Package.appxmanifest`'s `Identity Publisher` (`CN=PomodoroWindowsDev`) already matches this certificate's subject, so no manifest edit should be needed.
@@ -1278,7 +1278,7 @@ Then re-run the Step 5 build command. `Package.appxmanifest`'s `Identity Publish
 
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-cd D:\make_pomodoro_app\windows
+cd D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows
 dotnet build PomodoroWindows\PomodoroWindows.csproj -c Debug -p:Platform=x64
 Add-AppxPackage -Register PomodoroWindows\bin\x64\Debug\net8.0-windows10.0.19041.0\AppxManifest.xml
 Start-Process shell:AppsFolder\PomodoroWindows_hqfn3qvq51sga!App
@@ -1422,7 +1422,7 @@ public sealed class FakeSettingsStore : ISettingsStore
 
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-cd D:\make_pomodoro_app\windows
+cd D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows
 dotnet build PomodoroWindows\PomodoroWindows.csproj -c Debug -p:Platform=x64
 ```
 
@@ -1457,7 +1457,7 @@ The view model is the piece with real logic (deciding when to notify, when to re
 
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-cd D:\make_pomodoro_app\windows
+cd D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows
 dotnet new xunit -n PomodoroWindows.Tests -o PomodoroWindows.Tests --framework net8.0-windows10.0.19041.0
 Remove-Item PomodoroWindows.Tests\UnitTest1.cs
 dotnet add PomodoroWindows.Tests\PomodoroWindows.Tests.csproj reference PomodoroWindows\PomodoroWindows.csproj
@@ -1614,7 +1614,7 @@ public class TimerViewModelTests
 
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-cd D:\make_pomodoro_app\windows
+cd D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows
 dotnet test PomodoroWindows.Tests\PomodoroWindows.Tests.csproj -p:Platform=x64 -p:WindowsAppSdkDeploymentManagerInitialize=false
 ```
 
@@ -1728,7 +1728,7 @@ public sealed partial class TimerViewModel : ObservableObject
 
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-cd D:\make_pomodoro_app\windows
+cd D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows
 dotnet test PomodoroWindows.Tests\PomodoroWindows.Tests.csproj -p:Platform=x64 -p:WindowsAppSdkDeploymentManagerInitialize=false
 ```
 
@@ -1763,7 +1763,7 @@ public sealed class TimerTickService
 
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-cd D:\make_pomodoro_app\windows
+cd D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows
 dotnet build
 ```
 
@@ -1831,7 +1831,7 @@ public static class Palettes
 
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-cd D:\make_pomodoro_app\windows
+cd D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows
 dotnet build
 ```
 
@@ -2038,7 +2038,7 @@ Use the build+register+launch pattern from Global Constraints (`dotnet run` does
 
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-cd D:\make_pomodoro_app\windows
+cd D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows
 dotnet build PomodoroWindows\PomodoroWindows.csproj -c Debug -p:Platform=x64
 Add-AppxPackage -Register PomodoroWindows\bin\x64\Debug\net8.0-windows10.0.19041.0\AppxManifest.xml
 Start-Process shell:AppsFolder\PomodoroWindows_hqfn3qvq51sga!App
@@ -2166,7 +2166,7 @@ Append to `windows/PomodoroWindows.Tests/TimerViewModelTests.cs`:
 
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-cd D:\make_pomodoro_app\windows
+cd D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows
 dotnet test PomodoroWindows.Tests\PomodoroWindows.Tests.csproj -p:Platform=x64 -p:WindowsAppSdkDeploymentManagerInitialize=false
 ```
 
@@ -2395,7 +2395,7 @@ Use the build+register+launch pattern from Global Constraints:
 
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-cd D:\make_pomodoro_app\windows
+cd D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows
 dotnet build PomodoroWindows\PomodoroWindows.csproj -c Debug -p:Platform=x64
 Add-AppxPackage -Register PomodoroWindows\bin\x64\Debug\net8.0-windows10.0.19041.0\AppxManifest.xml
 Start-Process shell:AppsFolder\PomodoroWindows_hqfn3qvq51sga!App
@@ -2446,7 +2446,7 @@ Turn on 일일 목표 사용 in Settings with target 3, go back to the timer pag
 
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-cd D:\make_pomodoro_app\windows
+cd D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows
 dotnet test PomodoroWindows.Tests\PomodoroWindows.Tests.csproj -p:Platform=x64 -p:WindowsAppSdkDeploymentManagerInitialize=false
 dotnet build PomodoroWindows\PomodoroWindows.csproj -c Debug -p:Platform=x64
 Add-AppxPackage -Register PomodoroWindows\bin\x64\Debug\net8.0-windows10.0.19041.0\AppxManifest.xml
@@ -2537,7 +2537,7 @@ Use the build+register+launch pattern from Global Constraints:
 
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-cd D:\make_pomodoro_app\windows
+cd D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows
 dotnet build PomodoroWindows\PomodoroWindows.csproj -c Debug -p:Platform=x64
 Add-AppxPackage -Register PomodoroWindows\bin\x64\Debug\net8.0-windows10.0.19041.0\AppxManifest.xml
 Start-Process shell:AppsFolder\PomodoroWindows_hqfn3qvq51sga!App
@@ -2573,7 +2573,7 @@ git commit -m "feat: wire real toast notifications via AppNotificationManager"
 
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-cd D:\make_pomodoro_app\windows
+cd D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows
 dotnet add PomodoroWindows\PomodoroWindows.csproj package System.Drawing.Common
 ```
 
@@ -2698,7 +2698,7 @@ Use the build+register+launch pattern from Global Constraints:
 
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-cd D:\make_pomodoro_app\windows
+cd D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows
 dotnet build PomodoroWindows\PomodoroWindows.csproj -c Debug -p:Platform=x64
 Add-AppxPackage -Register PomodoroWindows\bin\x64\Debug\net8.0-windows10.0.19041.0\AppxManifest.xml
 Start-Process shell:AppsFolder\PomodoroWindows_hqfn3qvq51sga!App
@@ -2779,7 +2779,7 @@ Use the build+register+launch pattern from Global Constraints:
 
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-cd D:\make_pomodoro_app\windows
+cd D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows
 dotnet build PomodoroWindows\PomodoroWindows.csproj -c Debug -p:Platform=x64
 Add-AppxPackage -Register PomodoroWindows\bin\x64\Debug\net8.0-windows10.0.19041.0\AppxManifest.xml
 Start-Process shell:AppsFolder\PomodoroWindows_hqfn3qvq51sga!App
@@ -2808,7 +2808,7 @@ Run each test project explicitly rather than a solution-wide `dotnet test` — `
 
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-cd D:\make_pomodoro_app\windows
+cd D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows
 dotnet test PomodoroWindows.Core.Tests\PomodoroWindows.Core.Tests.csproj
 dotnet test PomodoroWindows.Tests\PomodoroWindows.Tests.csproj -p:Platform=x64 -p:WindowsAppSdkDeploymentManagerInitialize=false
 ```
@@ -2819,7 +2819,7 @@ Expected: `PomodoroWindows.Core.Tests` passes all 34 tests, `PomodoroWindows.Tes
 
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-cd D:\make_pomodoro_app\windows
+cd D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows
 dotnet publish PomodoroWindows\PomodoroWindows.csproj -c Release -p:Platform=x64 -p:GenerateAppxPackageOnBuild=true
 ```
 
