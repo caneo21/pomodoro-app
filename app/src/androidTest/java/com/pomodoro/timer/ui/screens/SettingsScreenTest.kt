@@ -216,4 +216,24 @@ class SettingsScreenTest {
 
         assertTrue(themeSelected == ColorTheme.OCEAN)
     }
+
+    @Test
+    fun replayOnboardingButton_invokesCallback() {
+        var replayClicked = false
+        composeRule.setContent {
+            PomodoroTheme {
+                SettingsScreen(
+                    focusMinutes = 25,
+                    breakMinutes = 5,
+                    onFocusMinutesChange = {},
+                    onBreakMinutesChange = {},
+                    onReplayOnboarding = { replayClicked = true },
+                    onBack = {}
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("replayOnboardingButton").performScrollTo().performClick()
+        assertTrue(replayClicked)
+    }
 }

@@ -67,6 +67,7 @@ fun SettingsScreen(
     onUseAlarmSoundChange: (Boolean) -> Unit = {},
     colorTheme: ColorTheme = ColorTheme.DEFAULT,
     onColorThemeChange: (ColorTheme) -> Unit = {},
+    onReplayOnboarding: () -> Unit = {},
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -283,6 +284,11 @@ fun SettingsScreen(
                         .testTag("colorThemeSwatch_${theme.name}")
                 )
             }
+        }
+
+        Spacer(Modifier.height(24.dp))
+        Button(onClick = onReplayOnboarding, modifier = Modifier.testTag("replayOnboardingButton")) {
+            Text("앱 사용법 다시보기")
         }
 
         Spacer(Modifier.height(24.dp))

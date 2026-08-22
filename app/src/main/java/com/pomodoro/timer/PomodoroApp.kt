@@ -2,6 +2,7 @@ package com.pomodoro.timer
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -9,18 +10,33 @@ import androidx.navigation.compose.rememberNavController
 import com.pomodoro.timer.ui.TimerViewModel
 import com.pomodoro.timer.ui.screens.SettingsScreen
 import com.pomodoro.timer.ui.screens.TimerScreen
+import com.pomodoro.timer.ui.screens.onboarding.OnboardingScreen
 
 private object Routes {
     const val TIMER = "timer"
     const val SETTINGS = "settings"
+    const val ONBOARDING = "onboarding"
 }
 
 @Composable
 fun PomodoroApp(viewModel: TimerViewModel) {
-    val navController = rememberNavController()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    NavHost(navController = navController, startDestination = Routes.TIMER) {
+    // uiState starts as the TimerUiState() default before the first DataStore emission
+    // arrives. Rendering nothing here (the caller's Surface already paints the themed
+    // background) avoids a one-frame flash of the wrong start destination while the real
+    // onboardingCompleted value is still unknown.
+    if (!uiState.settingsLoaded) return
+
+    // Captured once, when settingsLoaded first becomes true, so it reflects the real
+    // persisted value and then stays fixed for the rest of this composable's lifetime --
+    // it must not flip mid-session just because completeOnboarding() changes uiState.
+    val startedWithoutOnboarding = remember { !uiState.onboardingCompleted }
+
+    val navController = rememberNavController()
+    val startDestination = if (startedWithoutOnboarding) Routes.ONBOARDING else Routes.TIMER
+
+    NavHost(navController = navController, startDestination = startDestination) {
         composable(Routes.TIMER) {
             TimerScreen(
                 uiState = uiState,
@@ -58,7 +74,22 @@ fun PomodoroApp(viewModel: TimerViewModel) {
                 onUseAlarmSoundChange = viewModel::updateUseAlarmSound,
                 colorTheme = uiState.colorTheme,
                 onColorThemeChange = viewModel::updateColorTheme,
+                onReplayOnboarding = { navController.navigate(Routes.ONBOARDING) },
                 onBack = { navController.popBackStack() }
+            )
+        }
+        composable(Routes.ONBOARDING) {
+            OnboardingScreen(
+                onFinish = {
+                    if (startedWithoutOnboarding) {
+                        viewModel.completeOnboarding()
+                        navController.navigate(Routes.TIMER) {
+                            popUpTo(Routes.ONBOARDING) { inclusive = true }
+                        }
+                    } else {
+                        navController.popBackStack()
+                    }
+                }
             )
         }
     }
