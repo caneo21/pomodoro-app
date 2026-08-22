@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using Microsoft.UI.Xaml;
 using Microsoft.Windows.AppNotifications;
 using PomodoroWindows.Services;
@@ -31,6 +32,16 @@ public partial class App : Application
         }
         var notificationService = new AppNotificationService(() => settingsStore.Load().UseAlarmSound);
         var timerViewModel = new TimerViewModel(settingsStore, notificationService);
+
+        var keepAwakeService = new KeepAwakeService();
+        timerViewModel.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(TimerViewModel.IsRunning))
+            {
+                var keepScreenOn = settingsStore.Load().KeepScreenOn;
+                keepAwakeService.SetActive(timerViewModel.IsRunning && keepScreenOn);
+            }
+        };
 
         _window = new MainWindow();
         var frame = ((MainWindow)_window).RootFrame;
