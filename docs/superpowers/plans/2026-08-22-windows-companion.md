@@ -1852,10 +1852,13 @@ Wires `TimerViewModel` + `Palettes` into a visible screen: remaining time, phase
 
 **Files:**
 - Create: `windows/PomodoroWindows/Views/TimerPage.xaml` / `TimerPage.xaml.cs`
+- Create: `windows/PomodoroWindows/Views/SettingsPage.xaml` / `SettingsPage.xaml.cs` (minimal stub only — see Step 1b; Task 11 replaces both files wholesale)
 - Modify: `windows/PomodoroWindows/App.xaml.cs` (construct `TimerViewModel`/`TimerTickService`, host `TimerPage`)
 
 **Interfaces:**
 - Consumes: `TimerViewModel` (Task 8), `Palettes`/`PomodoroPalette` (Task 9).
+
+**Forward reference note (pre-flight scan gap, found during Task 10's implementation):** `TimerPage.xaml.cs`'s `SettingsButton_Click` (Step 2 below) navigates to `SettingsPage`, which isn't created until Task 11. Step 1b below adds a minimal stub so this compiles; Task 11 overwrites both `SettingsPage.xaml`/`.xaml.cs` files with the real implementation.
 
 - [ ] **Step 1: Write `TimerPage.xaml`**
 
@@ -1880,6 +1883,33 @@ Wires `TimerViewModel` + `Palettes` into a visible screen: remaining time, phase
         </StackPanel>
     </Grid>
 </Page>
+```
+
+- [ ] **Step 1b: Write a minimal `SettingsPage` stub (unblocks the forward reference below; Task 11 replaces both files entirely)**
+
+`windows/PomodoroWindows/Views/SettingsPage.xaml`:
+```xml
+<Page
+    x:Class="PomodoroWindows.Views.SettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid/>
+</Page>
+```
+
+`windows/PomodoroWindows/Views/SettingsPage.xaml.cs`:
+```csharp
+using Microsoft.UI.Xaml.Controls;
+
+namespace PomodoroWindows.Views;
+
+public sealed partial class SettingsPage : Page
+{
+    public SettingsPage()
+    {
+        InitializeComponent();
+    }
+}
 ```
 
 - [ ] **Step 2: Write `TimerPage.xaml.cs`**
@@ -2031,7 +2061,7 @@ git commit -m "feat: add TimerPage UI wired to TimerViewModel"
 
 **Files:**
 - Create: `windows/PomodoroWindows/ViewModels/SettingsViewModel.cs`
-- Create: `windows/PomodoroWindows/Views/SettingsPage.xaml` / `SettingsPage.xaml.cs`
+- Modify: `windows/PomodoroWindows/Views/SettingsPage.xaml` / `SettingsPage.xaml.cs` (Task 10 created a minimal stub — a `Page` with an empty `<Grid/>` — solely so `TimerPage.xaml.cs`'s `Frame.Navigate(typeof(SettingsPage), ...)` would compile; this task overwrites both files entirely with the real content below, nothing from the stub survives)
 - Modify: `windows/PomodoroWindows/Views/TimerPage.xaml.cs` (read live theme/dark-mode from `SettingsViewModel` instead of the Task 10 placeholder)
 
 **Interfaces:**
