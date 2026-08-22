@@ -10,6 +10,7 @@ public sealed partial class MainWindow : Window
     {
         InitializeComponent();
         Title = "Pomodoro";
+        AppWindow.SetIcon(System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "AppIcon.ico"));
         AppWindow.Closing += AppWindow_Closing;
     }
 

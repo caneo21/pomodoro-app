@@ -21,7 +21,7 @@ public sealed class TrayIconService : IDisposable
         _taskbarIcon = new TaskbarIcon
         {
             ToolTipText = "Pomodoro",
-            Icon = System.Drawing.SystemIcons.Application
+            Icon = new System.Drawing.Icon(System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "AppIcon.ico"))
         };
         _taskbarIcon.LeftClickCommand = new RelayNoArgCommand(RestoreWindow);
 
