@@ -1,4 +1,5 @@
 using Microsoft.UI.Xaml;
+using Microsoft.Windows.AppNotifications;
 using PomodoroWindows.Services;
 using PomodoroWindows.ViewModels;
 using PomodoroWindows.Views;
@@ -18,7 +19,8 @@ public partial class App : Application
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
         var settingsStore = new ApplicationDataSettingsStore();
-        var notificationService = new FakeNotificationService(); // replaced with AppNotificationService in Task 12
+        AppNotificationManager.Default.Register();
+        var notificationService = new AppNotificationService(() => settingsStore.Load().UseAlarmSound);
         var timerViewModel = new TimerViewModel(settingsStore, notificationService);
 
         _window = new MainWindow();
