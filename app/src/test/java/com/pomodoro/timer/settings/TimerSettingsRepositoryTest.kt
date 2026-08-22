@@ -258,4 +258,24 @@ class TimerSettingsRepositoryTest {
             assertEquals(theme, repository.settings.first().colorTheme)
         }
     }
+
+    @Test
+    fun `settings default to onboarding not completed`() = runTest {
+        val repository = TimerSettingsRepository(newDataStore())
+
+        val settings = repository.settings.first()
+
+        assertEquals(false, settings.onboardingCompleted)
+    }
+
+    @Test
+    fun `updateOnboardingCompleted persists`() = runTest {
+        val repository = TimerSettingsRepository(newDataStore())
+
+        repository.updateOnboardingCompleted(true)
+        assertEquals(true, repository.settings.first().onboardingCompleted)
+
+        repository.updateOnboardingCompleted(false)
+        assertEquals(false, repository.settings.first().onboardingCompleted)
+    }
 }

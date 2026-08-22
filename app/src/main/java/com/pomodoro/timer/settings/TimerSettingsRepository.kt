@@ -33,6 +33,7 @@ class TimerSettingsRepository(private val dataStore: DataStore<Preferences>) {
         val VIBRATION_ENABLED_KEY = booleanPreferencesKey("vibration_enabled")
         val USE_ALARM_SOUND_KEY = booleanPreferencesKey("use_alarm_sound")
         val COLOR_THEME_KEY = stringPreferencesKey("color_theme")
+        val ONBOARDING_COMPLETED_KEY = booleanPreferencesKey("onboarding_completed")
         const val DEFAULT_FOCUS_MINUTES = TimerDefaults.DEFAULT_FOCUS_MINUTES
         const val DEFAULT_BREAK_MINUTES = TimerDefaults.DEFAULT_BREAK_MINUTES
         const val MIN_FOCUS_MINUTES = TimerDefaults.MIN_FOCUS_MINUTES
@@ -64,7 +65,8 @@ class TimerSettingsRepository(private val dataStore: DataStore<Preferences>) {
             notificationsEnabled = prefs[NOTIFICATIONS_ENABLED_KEY] ?: true,
             vibrationEnabled = prefs[VIBRATION_ENABLED_KEY] ?: true,
             useAlarmSound = prefs[USE_ALARM_SOUND_KEY] ?: false,
-            colorTheme = ColorTheme.entries.firstOrNull { it.name == prefs[COLOR_THEME_KEY] } ?: ColorTheme.DEFAULT
+            colorTheme = ColorTheme.entries.firstOrNull { it.name == prefs[COLOR_THEME_KEY] } ?: ColorTheme.DEFAULT,
+            onboardingCompleted = prefs[ONBOARDING_COMPLETED_KEY] ?: false
         )
     }
 
@@ -120,6 +122,10 @@ class TimerSettingsRepository(private val dataStore: DataStore<Preferences>) {
 
     suspend fun updateColorTheme(theme: ColorTheme) {
         dataStore.edit { it[COLOR_THEME_KEY] = theme.name }
+    }
+
+    suspend fun updateOnboardingCompleted(completed: Boolean) {
+        dataStore.edit { it[ONBOARDING_COMPLETED_KEY] = completed }
     }
 
     val dailyGoalProgress: Flow<DailyGoalProgress> = dataStore.data.map { prefs ->

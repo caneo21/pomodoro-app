@@ -16,5 +16,6 @@ data class TimerSettings(
     val notificationsEnabled: Boolean = true,
     val vibrationEnabled: Boolean = true,
     val useAlarmSound: Boolean = false,
-    val colorTheme: ColorTheme = ColorTheme.DEFAULT
+    val colorTheme: ColorTheme = ColorTheme.DEFAULT,
+    val onboardingCompleted: Boolean = false
 )
