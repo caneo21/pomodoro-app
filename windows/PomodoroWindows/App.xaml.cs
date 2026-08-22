@@ -40,5 +40,15 @@ public partial class App : Application
         _tickService.Start();
 
         _window.Activate();
+
+        var trayIconService = new TrayIconService(_window, timerViewModel);
+        trayIconService.Show();
+        trayIconService.ExitRequested += () =>
+        {
+            ((MainWindow)_window).AllowClose = true;
+            _tickService?.Stop();
+            trayIconService.Dispose();
+            _window.Close();
+        };
     }
 }
