@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using PomodoroWindows.Core;
@@ -11,6 +12,7 @@ namespace PomodoroWindows.Views;
 public sealed partial class TimerPage : Page
 {
     private TimerViewModel? _viewModel;
+    private ColorTheme _colorTheme = ColorTheme.Default;
 
     public TimerPage()
     {
@@ -21,6 +23,7 @@ public sealed partial class TimerPage : Page
     {
         base.OnNavigatedTo(e);
         _viewModel = (TimerViewModel)e.Parameter;
+        _colorTheme = new Services.ApplicationDataSettingsStore().Load().ColorTheme;
         _viewModel.PropertyChanged += ViewModel_PropertyChanged;
         Render();
     }
@@ -54,7 +57,21 @@ public sealed partial class TimerPage : Page
         ProgressRing.Maximum = Math.Max(_viewModel.TotalMillis, 1);
         ProgressRing.Value = _viewModel.TotalMillis - _viewModel.RemainingMillis;
 
-        var palette = Palettes.PaletteFor(ColorTheme.Default, darkTheme: false);
+        var currentSettings = new Services.ApplicationDataSettingsStore().Load();
+        _colorTheme = currentSettings.ColorTheme;
+        var isDark = Microsoft.UI.Xaml.Application.Current.RequestedTheme == ApplicationTheme.Dark;
+        var palette = Palettes.PaletteFor(_colorTheme, isDark);
+
+        if (currentSettings.DailyGoalEnabled)
+        {
+            DailyGoalText.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
+            DailyGoalText.Text = $"오늘 목표: {_viewModel.DailyGoalCount}/{currentSettings.DailyGoalTarget}";
+        }
+        else
+        {
+            DailyGoalText.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
+        }
+
         var accent = _viewModel.Phase == TimerPhase.LongBreak ? palette.LongBreakAccent : palette.Primary;
         ProgressRing.Foreground = new SolidColorBrush(accent);
         RootGrid.Background = new SolidColorBrush(palette.Background);

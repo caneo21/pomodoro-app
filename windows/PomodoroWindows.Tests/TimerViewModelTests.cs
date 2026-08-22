@@ -104,4 +104,14 @@ public class TimerViewModelTests
         Assert.Equal(1, vm.DailyGoalCount);
         Assert.Equal(new[] { 1 }, notifications.DailyGoalReachedCalls);
     }
+
+    [Fact]
+    public void ApplySettings_updates_idle_remaining_time_to_the_new_focus_duration()
+    {
+        var vm = CreateViewModel(initialSettings: new TimerSettings(FocusMinutes: 25, BreakMinutes: 5));
+
+        vm.ApplySettings(new TimerSettings(FocusMinutes: 10, BreakMinutes: 5));
+
+        Assert.Equal(10 * 60_000L, vm.RemainingMillis);
+    }
 }

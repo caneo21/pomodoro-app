@@ -87,6 +87,19 @@ public sealed partial class TimerViewModel : ObservableObject
         }
     }
 
+    public void ApplySettings(TimerSettings settings)
+    {
+        _settings = settings;
+        _engine.UpdateDurations(
+            settings.FocusMinutes * 60_000L,
+            settings.BreakMinutes * 60_000L,
+            settings.LongBreakMinutes * 60_000L,
+            settings.PomodorosUntilLongBreak,
+            settings.AutoStartBreak,
+            settings.AutoStartFocus);
+        ApplyState(_engine.CurrentState(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
+    }
+
     private void ApplyState(TimerState state)
     {
         Phase = state.Phase;
