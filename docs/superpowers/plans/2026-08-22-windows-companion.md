@@ -1216,7 +1216,7 @@ public partial class App : Application
     x:Class="PomodoroWindows.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Frame x:Name="RootFrame"/>
+    <Frame x:Name="RootFrame" x:FieldModifier="public"/>
 </Window>
 ```
 
@@ -1978,7 +1978,7 @@ public partial class App : Application
 }
 ```
 
-`windows/PomodoroWindows/MainWindow.xaml.cs` needs `RootFrame` reachable — confirm the `x:Name="RootFrame"` on the `Frame` in `MainWindow.xaml` (added in Task 6) makes it a public field automatically (WinUI codegen); no change needed there.
+`windows/PomodoroWindows/MainWindow.xaml.cs` needs `RootFrame` reachable from `App.xaml.cs` — a different class in the same assembly. WinUI XAML codegen makes `x:Name` fields **private** by default, so `RootFrame` needs `x:FieldModifier="public"` in `MainWindow.xaml` (already specified in Task 6 Step 4 above) for this cross-class access to compile.
 
 - [ ] **Step 4: Build and run; verify manually**
 
@@ -2171,6 +2171,7 @@ Expected: `Passed! - Failed: 0, Passed: 7`
 ```csharp
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
 using PomodoroWindows.Core;
@@ -2493,7 +2494,19 @@ git commit -m "feat: wire real toast notifications via AppNotificationManager"
 - Consumes: `TimerViewModel` (Task 8), `MainWindow`.
 - Produces: `class TrayIconService : IDisposable` with a public `event Action? ExitRequested` and methods `Show()`.
 
-- [ ] **Step 1: Implement `TrayIconService`**
+- [ ] **Step 1: Add the `System.Drawing.Common` package**
+
+`TrayIconService` (Step 2 below) sets the tray icon from `System.Drawing.SystemIcons.Application`, which is not covered by any package Task 6 added:
+
+```powershell
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+cd D:\make_pomodoro_app\windows
+dotnet add PomodoroWindows\PomodoroWindows.csproj package System.Drawing.Common
+```
+
+If `H.NotifyIcon.WinUI`'s `TaskbarIcon.Icon` property rejects `System.Drawing.Icon` (a build error naming a different expected type, e.g. `Microsoft.UI.Xaml.Controls.IconSource`), that means this package version's WinUI-flavored `TaskbarIcon` uses a WinUI-native icon type instead — in that case, skip the `System.Drawing.Common` icon assignment and construct the icon via that expected type instead (check the compiler error's expected type and IntelliSense on `TaskbarIcon.Icon` for the exact API).
+
+- [ ] **Step 2: Implement `TrayIconService`**
 
 `windows/PomodoroWindows/Services/TrayIconService.cs`:
 ```csharp
@@ -2561,7 +2574,7 @@ internal sealed class RelayNoArgCommand : System.Windows.Input.ICommand
 }
 ```
 
-- [ ] **Step 2: Intercept `MainWindow` close to hide instead of exit**
+- [ ] **Step 3: Intercept `MainWindow` close to hide instead of exit**
 
 Replace `windows/PomodoroWindows/MainWindow.xaml.cs`:
 ```csharp
@@ -2590,7 +2603,7 @@ public sealed partial class MainWindow : Window
 }
 ```
 
-- [ ] **Step 3: Wire it into `App.xaml.cs`**
+- [ ] **Step 4: Wire it into `App.xaml.cs`**
 
 In `windows/PomodoroWindows/App.xaml.cs`, after `_window.Activate();`, add:
 ```csharp
@@ -2606,7 +2619,7 @@ In `windows/PomodoroWindows/App.xaml.cs`, after `_window.Activate();`, add:
 ```
 Add `using PomodoroWindows.Services;` if not already present (it is, from Task 8/12).
 
-- [ ] **Step 4: Build and run; verify manually**
+- [ ] **Step 5: Build and run; verify manually**
 
 ```powershell
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
@@ -2617,10 +2630,10 @@ dotnet run --project PomodoroWindows\PomodoroWindows.csproj -c Debug -p:Platform
 
 Manually verify: start the timer, close the window with X — window disappears but process keeps running (check Task Manager) and a tray icon appears. Right-click tray icon → 시작/일시정지 pauses the (invisible) timer. Left-click tray icon → window reappears showing the paused state. Right-click → 종료 fully exits the process.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add windows/PomodoroWindows/Services/TrayIconService.cs windows/PomodoroWindows/MainWindow.xaml.cs windows/PomodoroWindows/App.xaml.cs
+git add windows/PomodoroWindows/Services/TrayIconService.cs windows/PomodoroWindows/MainWindow.xaml.cs windows/PomodoroWindows/App.xaml.cs windows/PomodoroWindows/PomodoroWindows.csproj
 git commit -m "feat: add tray icon with minimize-to-tray on window close"
 ```
 
