@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PomodoroWindows.Core.Tests"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PomodoroWindows", "PomodoroWindows\PomodoroWindows.csproj", "{D2E64873-D0CB-4370-BDB6-1F3FAC1C95CA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PomodoroWindows.Tests", "PomodoroWindows.Tests\PomodoroWindows.Tests.csproj", "{1797D7FB-20F8-4729-81FC-0416489ED7AF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -30,5 +32,9 @@ Global
 		{D2E64873-D0CB-4370-BDB6-1F3FAC1C95CA}.Debug|Any CPU.Build.0 = Debug|x64
 		{D2E64873-D0CB-4370-BDB6-1F3FAC1C95CA}.Release|Any CPU.ActiveCfg = Release|x64
 		{D2E64873-D0CB-4370-BDB6-1F3FAC1C95CA}.Release|Any CPU.Build.0 = Release|x64
+		{1797D7FB-20F8-4729-81FC-0416489ED7AF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1797D7FB-20F8-4729-81FC-0416489ED7AF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1797D7FB-20F8-4729-81FC-0416489ED7AF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1797D7FB-20F8-4729-81FC-0416489ED7AF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
