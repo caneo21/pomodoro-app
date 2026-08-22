@@ -46,6 +46,7 @@ public sealed class TrayIconService : IDisposable
 
     private void RestoreWindow()
     {
+        _window.AppWindow.Show();
         _window.Activate();
     }
 

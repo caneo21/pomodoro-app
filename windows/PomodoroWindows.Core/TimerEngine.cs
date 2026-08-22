@@ -2,6 +2,8 @@ namespace PomodoroWindows.Core;
 
 public sealed class TimerEngine
 {
+    // Floor for any externally-supplied phase duration: a zero duration would make
+    // AdvanceAcrossPhaseBoundaries add zero forever.
     private static readonly long MinPhaseMillis = Math.Min(
         TimerDefaults.MinFocusMinutes,
         Math.Min(TimerDefaults.MinBreakMinutes, TimerDefaults.MinLongBreakMinutes)) * 60_000L;
@@ -18,6 +20,10 @@ public sealed class TimerEngine
     private long _endTimestamp;
     private long _remainingWhenIdle;
     private int _completedPomodoros;
+
+    // Duration the in-flight phase was entered with. Kept separate from _focusMillis/_shortBreakMillis/
+    // _longBreakMillis so a mid-session duration change can't make RemainingMillis exceed TotalMillis;
+    // it applies on the next phase flip instead.
     private long _currentPhaseDurationMillis;
 
     public TimerEngine(
@@ -111,6 +117,7 @@ public sealed class TimerEngine
         return CurrentState(now);
     }
 
+    // Deliberately does not go through NextPhase(), so a reset never clears the completed-pomodoros count.
     public TimerState Reset(long now)
     {
         _isRunning = false;

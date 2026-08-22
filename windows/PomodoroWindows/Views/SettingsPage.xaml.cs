@@ -133,6 +133,7 @@ public sealed partial class SettingsPage : Page
         if (_isLoading || _viewModel is null) return;
         _viewModel.KeepScreenOn = KeepScreenOnToggle.IsOn;
         _viewModel.Save();
+        (Microsoft.UI.Xaml.Application.Current as App)?.RefreshKeepAwake();
     }
 
     private void DailyGoalEnabledToggle_Toggled(object sender, RoutedEventArgs e)

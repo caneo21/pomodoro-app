@@ -1,5 +1,4 @@
 using Microsoft.UI.Xaml;
-using WinRT.Interop;
 
 namespace PomodoroWindows;
 

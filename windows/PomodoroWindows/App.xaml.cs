@@ -11,6 +11,9 @@ public partial class App : Application
 {
     private Window? _window;
     private TimerTickService? _tickService;
+    private ApplicationDataSettingsStore? _settingsStore;
+    private TimerViewModel? _timerViewModel;
+    private KeepAwakeService? _keepAwakeService;
 
     public App()
     {
@@ -20,6 +23,7 @@ public partial class App : Application
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
         var settingsStore = new ApplicationDataSettingsStore();
+        _settingsStore = settingsStore;
         try
         {
             AppNotificationManager.Default.Register();
@@ -32,14 +36,15 @@ public partial class App : Application
         }
         var notificationService = new AppNotificationService(() => settingsStore.Load().UseAlarmSound);
         var timerViewModel = new TimerViewModel(settingsStore, notificationService);
+        _timerViewModel = timerViewModel;
 
         var keepAwakeService = new KeepAwakeService();
+        _keepAwakeService = keepAwakeService;
         timerViewModel.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(TimerViewModel.IsRunning))
             {
-                var keepScreenOn = settingsStore.Load().KeepScreenOn;
-                keepAwakeService.SetActive(timerViewModel.IsRunning && keepScreenOn);
+                UpdateKeepAwake();
             }
         };
 
@@ -61,5 +66,17 @@ public partial class App : Application
             trayIconService.Dispose();
             _window.Close();
         };
+    }
+
+    // Re-runs the same keep-awake decision the IsRunning-change handler uses, so toggling the
+    // KeepScreenOn setting while a session is already running takes effect immediately instead of
+    // waiting for the next start/pause.
+    public void RefreshKeepAwake() => UpdateKeepAwake();
+
+    private void UpdateKeepAwake()
+    {
+        if (_timerViewModel is null || _keepAwakeService is null || _settingsStore is null) return;
+        var keepScreenOn = _settingsStore.Load().KeepScreenOn;
+        _keepAwakeService.SetActive(_timerViewModel.IsRunning && keepScreenOn);
     }
 }

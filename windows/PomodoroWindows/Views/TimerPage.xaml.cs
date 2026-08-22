@@ -12,7 +12,7 @@ namespace PomodoroWindows.Views;
 public sealed partial class TimerPage : Page
 {
     private TimerViewModel? _viewModel;
-    private ColorTheme _colorTheme = ColorTheme.Default;
+    private Models.TimerSettings _settings = new();
 
     public TimerPage()
     {
@@ -23,8 +23,9 @@ public sealed partial class TimerPage : Page
     {
         base.OnNavigatedTo(e);
         _viewModel = (TimerViewModel)e.Parameter;
-        _colorTheme = new Services.ApplicationDataSettingsStore().Load().ColorTheme;
+        _settings = new Services.ApplicationDataSettingsStore().Load();
         _viewModel.PropertyChanged += ViewModel_PropertyChanged;
+        ActualThemeChanged += ActualThemeChanged_Handler;
         Render();
     }
 
@@ -32,9 +33,13 @@ public sealed partial class TimerPage : Page
     {
         base.OnNavigatedFrom(e);
         if (_viewModel is not null) _viewModel.PropertyChanged -= ViewModel_PropertyChanged;
+        ActualThemeChanged -= ActualThemeChanged_Handler;
     }
 
     private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e) =>
+        DispatcherQueue.TryEnqueue(Render);
+
+    private void ActualThemeChanged_Handler(FrameworkElement sender, object args) =>
         DispatcherQueue.TryEnqueue(Render);
 
     private void Render()
@@ -57,15 +62,13 @@ public sealed partial class TimerPage : Page
         ProgressRing.Maximum = Math.Max(_viewModel.TotalMillis, 1);
         ProgressRing.Value = _viewModel.TotalMillis - _viewModel.RemainingMillis;
 
-        var currentSettings = new Services.ApplicationDataSettingsStore().Load();
-        _colorTheme = currentSettings.ColorTheme;
-        var isDark = Microsoft.UI.Xaml.Application.Current.RequestedTheme == ApplicationTheme.Dark;
-        var palette = Palettes.PaletteFor(_colorTheme, isDark);
+        var isDark = this.ActualTheme == ElementTheme.Dark;
+        var palette = Palettes.PaletteFor(_settings.ColorTheme, isDark);
 
-        if (currentSettings.DailyGoalEnabled)
+        if (_settings.DailyGoalEnabled)
         {
             DailyGoalText.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
-            DailyGoalText.Text = $"오늘 목표: {_viewModel.DailyGoalCount}/{currentSettings.DailyGoalTarget}";
+            DailyGoalText.Text = $"오늘 목표: {_viewModel.DailyGoalCount}/{_settings.DailyGoalTarget}";
         }
         else
         {
