@@ -1,0 +1,11 @@
+D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows\PomodoroWindows.Core\bin\Debug\net8.0\PomodoroWindows.Core.deps.json
+D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows\PomodoroWindows.Core\bin\Debug\net8.0\PomodoroWindows.Core.dll
+D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows\PomodoroWindows.Core\bin\Debug\net8.0\PomodoroWindows.Core.pdb
+D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows\PomodoroWindows.Core\obj\Debug\net8.0\PomodoroWindows.Core.GeneratedMSBuildEditorConfig.editorconfig
+D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows\PomodoroWindows.Core\obj\Debug\net8.0\PomodoroWindows.Core.AssemblyInfoInputs.cache
+D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows\PomodoroWindows.Core\obj\Debug\net8.0\PomodoroWindows.Core.AssemblyInfo.cs
+D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows\PomodoroWindows.Core\obj\Debug\net8.0\PomodoroWindows.Core.csproj.CoreCompileInputs.cache
+D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows\PomodoroWindows.Core\obj\Debug\net8.0\PomodoroWindows.Core.dll
+D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows\PomodoroWindows.Core\obj\Debug\net8.0\refint\PomodoroWindows.Core.dll
+D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows\PomodoroWindows.Core\obj\Debug\net8.0\PomodoroWindows.Core.pdb
+D:\make_pomodoro_app\.claude\worktrees\windows-companion\windows\PomodoroWindows.Core\obj\Debug\net8.0\ref\PomodoroWindows.Core.dll
