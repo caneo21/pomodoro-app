@@ -1062,9 +1062,9 @@ Creates the packaged WinUI 3 app shell referencing `PomodoroWindows.Core`, with 
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260209005" />
-    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.1742" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2526" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
-    <PackageReference Include="H.NotifyIcon.WinUI" Version="2.4.1" />
+    <PackageReference Include="H.NotifyIcon.WinUI" Version="2.3.2" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\PomodoroWindows.Core\PomodoroWindows.Core.csproj" />
