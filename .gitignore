@@ -9,3 +9,6 @@ build/
 .cxx
 local.properties
 .superpowers/
+keystore.properties
+keystore/*.jks
+keystore/*.keystore
