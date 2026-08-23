@@ -34,7 +34,6 @@ import androidx.wear.compose.material3.Text
 import com.pomodoro.timer.core.TimerPhase
 import com.pomodoro.timer.wear.R
 import com.pomodoro.timer.wear.theme.WearLongBreakAccent
-import com.pomodoro.timer.wear.theme.wearPaletteFor
 
 @OptIn(ExperimentalTextApi::class)
 private val ManropeExtraBold = FontFamily(
