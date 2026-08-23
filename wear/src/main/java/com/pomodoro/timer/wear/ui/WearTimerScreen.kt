@@ -16,8 +16,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.ExperimentalTextApi
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material3.CircularProgressIndicator
+import androidx.wear.compose.material3.CircularProgressIndicatorDefaults
 import androidx.wear.compose.material3.FilledIconButton
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.IconButton
@@ -26,7 +32,18 @@ import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ProgressIndicatorDefaults
 import androidx.wear.compose.material3.Text
 import com.pomodoro.timer.core.TimerPhase
+import com.pomodoro.timer.wear.R
+import com.pomodoro.timer.wear.theme.WearLongBreakAccent
 import com.pomodoro.timer.wear.theme.wearPaletteFor
+
+@OptIn(ExperimentalTextApi::class)
+private val ManropeExtraBold = FontFamily(
+    Font(
+        resId = R.font.manrope_variable,
+        weight = FontWeight.W800,
+        variationSettings = FontVariation.Settings(FontVariation.weight(800))
+    )
+)
 
 @Composable
 fun WearTimerScreen(
@@ -41,7 +58,15 @@ fun WearTimerScreen(
 
     if (isAmbient) {
         Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(text = remainingText, color = Color.White)
+            Text(
+                text = remainingText,
+                color = Color.White,
+                style = MaterialTheme.typography.displaySmall.copy(
+                    fontFamily = ManropeExtraBold,
+                    fontWeight = FontWeight.W800,
+                    fontFeatureSettings = "tnum"
+                )
+            )
         }
         return
     }
@@ -54,7 +79,7 @@ fun WearTimerScreen(
     val ringColor = progressColorFor(
         uiState.phase,
         MaterialTheme.colorScheme.primary,
-        wearPaletteFor(uiState.colorTheme).longBreakAccent
+        WearLongBreakAccent
     )
 
     Column(
@@ -74,10 +99,18 @@ fun WearTimerScreen(
         Box(contentAlignment = Alignment.Center) {
             CircularProgressIndicator(
                 progress = { progress },
-                modifier = Modifier.size(130.dp),
+                modifier = Modifier.size(150.dp),
+                strokeWidth = CircularProgressIndicatorDefaults.smallStrokeWidth,
                 colors = ProgressIndicatorDefaults.colors(indicatorColor = ringColor)
             )
-            Text(text = remainingText, style = MaterialTheme.typography.displaySmall)
+            Text(
+                text = remainingText,
+                style = MaterialTheme.typography.displaySmall.copy(
+                    fontFamily = ManropeExtraBold,
+                    fontWeight = FontWeight.W800,
+                    fontFeatureSettings = "tnum"
+                )
+            )
         }
 
         Row(
