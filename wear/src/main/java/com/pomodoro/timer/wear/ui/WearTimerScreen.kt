@@ -2,7 +2,6 @@ package com.pomodoro.timer.wear.ui
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.ExperimentalTextApi
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontVariation
@@ -33,6 +33,7 @@ import androidx.wear.compose.material3.FilledIconButton
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.IconButton
 import androidx.wear.compose.material3.IconButtonDefaults
+import androidx.wear.compose.material3.LocalTextStyle
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ProgressIndicatorDefaults
 import androidx.wear.compose.material3.Text
@@ -47,6 +48,12 @@ private val ManropeExtraBold = FontFamily(
         weight = FontWeight.W800,
         variationSettings = FontVariation.Settings(FontVariation.weight(800))
     )
+)
+
+private fun wearTimerDigitFontStyle(base: TextStyle): TextStyle = base.copy(
+    fontFamily = ManropeExtraBold,
+    fontWeight = FontWeight.W800,
+    fontFeatureSettings = "tnum"
 )
 
 @Composable
@@ -65,11 +72,7 @@ fun WearTimerScreen(
             Text(
                 text = remainingText,
                 color = Color.White,
-                style = MaterialTheme.typography.displaySmall.copy(
-                    fontFamily = ManropeExtraBold,
-                    fontWeight = FontWeight.W800,
-                    fontFeatureSettings = "tnum"
-                )
+                style = wearTimerDigitFontStyle(LocalTextStyle.current)
             )
         }
         return
@@ -85,14 +88,9 @@ fun WearTimerScreen(
         MaterialTheme.colorScheme.primary,
         WearLongBreakAccent
     )
-    val animatedProgress by animateFloatAsState(
-        targetValue = progress,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
-        label = "wearTimerProgress"
-    )
     val animatedRingColor by animateColorAsState(
         targetValue = ringColor,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow),
         label = "wearTimerRingColor"
     )
 
@@ -112,18 +110,14 @@ fun WearTimerScreen(
 
         Box(contentAlignment = Alignment.Center) {
             CircularProgressIndicator(
-                progress = { animatedProgress },
-                modifier = Modifier.size(150.dp),
+                progress = { progress },
+                modifier = Modifier.size(120.dp),
                 strokeWidth = CircularProgressIndicatorDefaults.smallStrokeWidth,
                 colors = ProgressIndicatorDefaults.colors(indicatorColor = animatedRingColor)
             )
             Text(
                 text = remainingText,
-                style = MaterialTheme.typography.displaySmall.copy(
-                    fontFamily = ManropeExtraBold,
-                    fontWeight = FontWeight.W800,
-                    fontFeatureSettings = "tnum"
-                )
+                style = wearTimerDigitFontStyle(MaterialTheme.typography.displaySmall)
             )
         }
 

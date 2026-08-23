@@ -2,13 +2,14 @@ package com.pomodoro.timer.wear.ui
 
 import androidx.compose.ui.graphics.Color
 import com.pomodoro.timer.core.TimerPhase
+import com.pomodoro.timer.wear.theme.WearLongBreakAccent
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class WearTimerScreenColorTest {
 
-    private val primary = Color(0xFFE85D4A)
-    private val longBreakAccent = Color(0xFF5C6BC0)
+    private val primary = Color(0xFFFF6B57)
+    private val longBreakAccent = WearLongBreakAccent
 
     @Test
     fun `progressColorFor returns primary for FOCUS`() {
