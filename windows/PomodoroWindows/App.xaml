@@ -7,6 +7,47 @@
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
             </ResourceDictionary.MergedDictionaries>
+
+            <CornerRadius x:Key="CardCornerRadius">24</CornerRadius>
+            <CornerRadius x:Key="PillCornerRadius">999</CornerRadius>
+            <CornerRadius x:Key="ChipCornerRadius">999</CornerRadius>
+
+            <Style x:Key="SurfaceCardStyle" TargetType="Border">
+                <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}"/>
+                <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="CornerRadius" Value="{StaticResource CardCornerRadius}"/>
+                <Setter Property="Padding" Value="24"/>
+            </Style>
+
+            <Style x:Key="ChipBorderStyle" TargetType="Border">
+                <Setter Property="Background" Value="{ThemeResource ControlFillColorSecondaryBrush}"/>
+                <Setter Property="CornerRadius" Value="{StaticResource ChipCornerRadius}"/>
+                <Setter Property="Padding" Value="14,6"/>
+            </Style>
+
+            <Style x:Key="SectionHeaderTextStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="13"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}"/>
+            </Style>
+
+            <Style x:Key="PillButtonBaseStyle" TargetType="Button">
+                <Setter Property="CornerRadius" Value="{StaticResource PillCornerRadius}"/>
+                <Setter Property="Padding" Value="28,12"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="MinWidth" Value="112"/>
+                <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            </Style>
+
+            <Style x:Key="AccentPillButtonStyle" TargetType="Button" BasedOn="{StaticResource PillButtonBaseStyle}"/>
+
+            <Style x:Key="SubtlePillButtonStyle" TargetType="Button" BasedOn="{StaticResource PillButtonBaseStyle}">
+                <Setter Property="Background" Value="{ThemeResource ControlFillColorSecondaryBrush}"/>
+                <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="MinWidth" Value="96"/>
+            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
