@@ -50,7 +50,6 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 internal const val RESET_HOLD_MILLIS = 3000L
-private const val HOLD_VISUAL_HEAD_START = 0.06f
 
 @OptIn(ExperimentalTextApi::class)
 private val ManropeExtraBold = FontFamily(
@@ -144,13 +143,7 @@ fun WearTimerScreen(
                                         if (startFrameMillis < 0) startFrameMillis = frameMillis
                                         frameMillis - startFrameMillis
                                     }
-                                    val linearRatio = (elapsed / RESET_HOLD_MILLIS.toFloat()).coerceIn(0f, 1f)
-                                    // Start the visible fill at HOLD_VISUAL_HEAD_START instead of 0 so the
-                                    // ring shows an immediate, unmistakable tick the instant the press is
-                                    // recognized — a literal 0-start reads as a dead pause for the first
-                                    // couple hundred ms, since the indicator's own spring animation also
-                                    // ramps up slowly from rest.
-                                    holdProgress = HOLD_VISUAL_HEAD_START + linearRatio * (1f - HOLD_VISUAL_HEAD_START)
+                                    holdProgress = (elapsed / RESET_HOLD_MILLIS.toFloat()).coerceIn(0f, 1f)
                                     gesture.onHoldElapsed(elapsed)
                                     if (elapsed >= RESET_HOLD_MILLIS) break
                                 }
