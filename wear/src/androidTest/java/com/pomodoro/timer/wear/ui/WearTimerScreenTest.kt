@@ -3,8 +3,9 @@ package com.pomodoro.timer.wear.ui
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
 import com.pomodoro.timer.wear.theme.PomodoroWearTheme
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -15,7 +16,7 @@ class WearTimerScreenTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun startButton_isShownWhenIdle_andInvokesCallback() {
+    fun tap_whenIdle_invokesOnStart() {
         var startClicked = false
         composeRule.setContent {
             PomodoroWearTheme {
@@ -29,12 +30,17 @@ class WearTimerScreenTest {
             }
         }
 
-        composeRule.onNodeWithTag("startButton").performClick()
+        composeRule.onNodeWithTag("timerTapArea").performTouchInput {
+            down(center)
+            up()
+        }
+        composeRule.waitForIdle()
+
         assertTrue(startClicked)
     }
 
     @Test
-    fun pauseButton_isShownWhenRunning_andInvokesCallback() {
+    fun tap_whenRunning_invokesOnPause() {
         var pauseClicked = false
         composeRule.setContent {
             PomodoroWearTheme {
@@ -48,27 +54,67 @@ class WearTimerScreenTest {
             }
         }
 
-        composeRule.onNodeWithTag("pauseButton").performClick()
+        composeRule.onNodeWithTag("timerTapArea").performTouchInput {
+            down(center)
+            up()
+        }
+        composeRule.waitForIdle()
+
         assertTrue(pauseClicked)
     }
 
     @Test
-    fun resetButton_invokesCallback() {
+    fun holdingPastThreshold_invokesOnReset_notStart() {
+        var startClicked = false
         var resetClicked = false
+        composeRule.mainClock.autoAdvance = false
         composeRule.setContent {
             PomodoroWearTheme {
                 WearTimerScreen(
-                    uiState = WearTimerUiState(),
+                    uiState = WearTimerUiState(isRunning = false),
                     isAmbient = false,
-                    onStart = {},
+                    onStart = { startClicked = true },
                     onPause = {},
                     onReset = { resetClicked = true }
                 )
             }
         }
 
-        composeRule.onNodeWithTag("resetButton").performClick()
+        composeRule.onNodeWithTag("timerTapArea").performTouchInput { down(center) }
+        composeRule.mainClock.advanceTimeBy(RESET_HOLD_MILLIS + 200L)
+        composeRule.onNodeWithTag("timerTapArea").performTouchInput { up() }
+        composeRule.mainClock.autoAdvance = true
+        composeRule.waitForIdle()
+
         assertTrue(resetClicked)
+        assertFalse(startClicked)
+    }
+
+    @Test
+    fun releasingBeforeThreshold_invokesTap_notReset() {
+        var startClicked = false
+        var resetClicked = false
+        composeRule.mainClock.autoAdvance = false
+        composeRule.setContent {
+            PomodoroWearTheme {
+                WearTimerScreen(
+                    uiState = WearTimerUiState(isRunning = false),
+                    isAmbient = false,
+                    onStart = { startClicked = true },
+                    onPause = {},
+                    onReset = { resetClicked = true }
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("timerTapArea").performTouchInput { down(center) }
+        composeRule.mainClock.advanceTimeBy(1200L)
+        composeRule.onNodeWithTag("timerTapArea").performTouchInput { up() }
+        composeRule.mainClock.autoAdvance = true
+        composeRule.waitForIdle()
+
+        assertTrue(startClicked)
+        assertFalse(resetClicked)
     }
 
     @Test
@@ -104,5 +150,37 @@ class WearTimerScreenTest {
 
         composeRule.onNodeWithTag("cycleProgressText").assertExists()
         composeRule.onNodeWithText("2/4").assertExists()
+    }
+
+    @Test
+    fun gestureHint_isShownWhenIdle() {
+        composeRule.setContent {
+            PomodoroWearTheme {
+                WearTimerScreen(
+                    uiState = WearTimerUiState(isRunning = false),
+                    isAmbient = false,
+                    onStart = {},
+                    onPause = {},
+                    onReset = {}
+                )
+            }
+        }
+        composeRule.onNodeWithTag("gestureHint").assertExists()
+    }
+
+    @Test
+    fun gestureHint_isHiddenWhenRunning() {
+        composeRule.setContent {
+            PomodoroWearTheme {
+                WearTimerScreen(
+                    uiState = WearTimerUiState(isRunning = true),
+                    isAmbient = false,
+                    onStart = {},
+                    onPause = {},
+                    onReset = {}
+                )
+            }
+        }
+        composeRule.onNodeWithTag("gestureHint").assertDoesNotExist()
     }
 }
