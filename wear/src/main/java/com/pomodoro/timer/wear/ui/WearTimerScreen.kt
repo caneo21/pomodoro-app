@@ -1,5 +1,9 @@
 package com.pomodoro.timer.wear.ui
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +16,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -80,6 +85,16 @@ fun WearTimerScreen(
         MaterialTheme.colorScheme.primary,
         WearLongBreakAccent
     )
+    val animatedProgress by animateFloatAsState(
+        targetValue = progress,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        label = "wearTimerProgress"
+    )
+    val animatedRingColor by animateColorAsState(
+        targetValue = ringColor,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium),
+        label = "wearTimerRingColor"
+    )
 
     Column(
         modifier = modifier.fillMaxSize().padding(vertical = 8.dp),
@@ -97,10 +112,10 @@ fun WearTimerScreen(
 
         Box(contentAlignment = Alignment.Center) {
             CircularProgressIndicator(
-                progress = { progress },
+                progress = { animatedProgress },
                 modifier = Modifier.size(150.dp),
                 strokeWidth = CircularProgressIndicatorDefaults.smallStrokeWidth,
-                colors = ProgressIndicatorDefaults.colors(indicatorColor = ringColor)
+                colors = ProgressIndicatorDefaults.colors(indicatorColor = animatedRingColor)
             )
             Text(
                 text = remainingText,
