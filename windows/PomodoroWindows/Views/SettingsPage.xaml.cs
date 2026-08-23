@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
+using PomodoroWindows.Controls;
 using PomodoroWindows.Core;
 using PomodoroWindows.Theme;
 using PomodoroWindows.ViewModels;
@@ -27,6 +28,7 @@ public sealed partial class SettingsPage : Page
         _viewModel = new SettingsViewModel(new Services.ApplicationDataSettingsStore(), timerViewModel);
         LoadIntoControls();
         ApplyPaletteToChrome();
+        PressScaleBehavior.Attach(BackButton);
     }
 
     private void ApplyPaletteToChrome()

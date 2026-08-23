@@ -4,6 +4,7 @@ using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using PomodoroWindows.Controls;
 using PomodoroWindows.Core;
 using PomodoroWindows.Theme;
 using PomodoroWindows.ViewModels;
@@ -29,6 +30,7 @@ public sealed partial class TimerPage : Page
     private Color _targetAccent;
     private long _lastRenderingTimestamp;
     private bool _isRenderingLoopActive;
+    private bool _pressScaleAttached;
 
     public bool IsMiniMode { get; private set; }
     public event EventHandler<bool>? MiniModeChanged;
@@ -97,6 +99,13 @@ public sealed partial class TimerPage : Page
         _viewModel.PropertyChanged += ViewModel_PropertyChanged;
         ActualThemeChanged += ActualThemeChanged_Handler;
         StartRenderingLoop();
+        if (!_pressScaleAttached)
+        {
+            _pressScaleAttached = true;
+            PressScaleBehavior.Attach(StartPauseButton);
+            PressScaleBehavior.Attach(ResetButton);
+            PressScaleBehavior.Attach(SettingsButton);
+        }
         Render(resetMotion: true);
     }
 
