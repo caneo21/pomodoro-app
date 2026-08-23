@@ -4,9 +4,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
@@ -18,12 +17,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import androidx.wear.compose.material.Icon
-import androidx.wear.compose.material.MaterialTheme
-import androidx.wear.compose.material.OutlinedButton
-import androidx.wear.compose.material.CircularProgressIndicator
-import androidx.wear.compose.material.Button
-import androidx.wear.compose.material.Text
+import androidx.wear.compose.material3.CircularProgressIndicator
+import androidx.wear.compose.material3.FilledIconButton
+import androidx.wear.compose.material3.Icon
+import androidx.wear.compose.material3.IconButton
+import androidx.wear.compose.material3.IconButtonDefaults
+import androidx.wear.compose.material3.MaterialTheme
+import androidx.wear.compose.material3.ProgressIndicatorDefaults
+import androidx.wear.compose.material3.Text
 import com.pomodoro.timer.core.TimerPhase
 import com.pomodoro.timer.wear.theme.wearPaletteFor
 
@@ -45,53 +46,70 @@ fun WearTimerScreen(
         return
     }
 
-    Column(
-        modifier = modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = phaseLabel(uiState.phase),
-            style = MaterialTheme.typography.title3
-        )
-        Text(
-            text = "${uiState.completedPomodoros}/${uiState.pomodorosUntilLongBreak}",
-            style = MaterialTheme.typography.caption2,
-            modifier = Modifier.testTag("cycleProgressText")
-        )
-        Spacer(Modifier.height(8.dp))
+    val progress = if (uiState.totalMillis > 0) {
+        uiState.remainingMillis.toFloat() / uiState.totalMillis.toFloat()
+    } else {
+        0f
+    }
+    val ringColor = progressColorFor(
+        uiState.phase,
+        MaterialTheme.colorScheme.primary,
+        wearPaletteFor(uiState.colorTheme).longBreakAccent
+    )
 
-        val progress = if (uiState.totalMillis > 0) {
-            uiState.remainingMillis.toFloat() / uiState.totalMillis.toFloat()
-        } else {
-            0f
+    Column(
+        modifier = modifier.fillMaxSize().padding(vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(text = phaseLabel(uiState.phase), style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = "${uiState.completedPomodoros}/${uiState.pomodorosUntilLongBreak}",
+                style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier.testTag("cycleProgressText")
+            )
         }
+
         Box(contentAlignment = Alignment.Center) {
             CircularProgressIndicator(
-                progress = progress,
-                modifier = Modifier.size(120.dp),
-                indicatorColor = progressColorFor(
-                    uiState.phase,
-                    MaterialTheme.colors.primary,
-                    wearPaletteFor(uiState.colorTheme).longBreakAccent
-                )
+                progress = { progress },
+                modifier = Modifier.size(130.dp),
+                colors = ProgressIndicatorDefaults.colors(indicatorColor = ringColor)
             )
-            Text(text = remainingText, style = MaterialTheme.typography.title2)
+            Text(text = remainingText, style = MaterialTheme.typography.displaySmall)
         }
 
-        Spacer(Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onReset, modifier = Modifier.testTag("resetButton")) {
+                Icon(Icons.Default.Refresh, contentDescription = "리셋")
+            }
+
             if (uiState.isRunning) {
-                Button(onClick = onPause, modifier = Modifier.testTag("pauseButton")) {
-                    Icon(Icons.Default.Pause, contentDescription = "일시정지")
+                FilledIconButton(
+                    onClick = onPause,
+                    modifier = Modifier.size(IconButtonDefaults.LargeButtonSize).testTag("pauseButton")
+                ) {
+                    Icon(
+                        Icons.Default.Pause,
+                        contentDescription = "일시정지",
+                        modifier = Modifier.size(IconButtonDefaults.LargeIconSize)
+                    )
                 }
             } else {
-                Button(onClick = onStart, modifier = Modifier.testTag("startButton")) {
-                    Icon(Icons.Default.PlayArrow, contentDescription = "시작")
+                FilledIconButton(
+                    onClick = onStart,
+                    modifier = Modifier.size(IconButtonDefaults.LargeButtonSize).testTag("startButton")
+                ) {
+                    Icon(
+                        Icons.Default.PlayArrow,
+                        contentDescription = "시작",
+                        modifier = Modifier.size(IconButtonDefaults.LargeIconSize)
+                    )
                 }
-            }
-            OutlinedButton(onClick = onReset, modifier = Modifier.testTag("resetButton")) {
-                Icon(Icons.Default.Refresh, contentDescription = "리셋")
             }
         }
     }

@@ -2,8 +2,8 @@ package com.pomodoro.timer.wear.theme
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import androidx.wear.compose.material.Colors
-import androidx.wear.compose.material.MaterialTheme
+import androidx.wear.compose.material3.ColorScheme
+import androidx.wear.compose.material3.MaterialTheme
 import com.pomodoro.timer.core.ColorTheme
 
 data class WearPalette(
@@ -55,15 +55,16 @@ private val WearPalettes: Map<ColorTheme, WearPalette> = mapOf(
 
 fun wearPaletteFor(theme: ColorTheme): WearPalette = WearPalettes.getValue(theme)
 
+fun wearColorScheme(palette: WearPalette): ColorScheme = ColorScheme(
+    primary = palette.primary,
+    primaryContainer = palette.primaryVariant,
+    onPrimary = palette.onPrimary,
+    background = palette.background,
+    onBackground = palette.onBackground
+)
+
 @Composable
 fun PomodoroWearTheme(colorTheme: ColorTheme = ColorTheme.DEFAULT, content: @Composable () -> Unit) {
     val palette = wearPaletteFor(colorTheme)
-    val colors = Colors(
-        primary = palette.primary,
-        primaryVariant = palette.primaryVariant,
-        onPrimary = palette.onPrimary,
-        background = palette.background,
-        onBackground = palette.onBackground
-    )
-    MaterialTheme(colors = colors, content = content)
+    MaterialTheme(colorScheme = wearColorScheme(palette), content = content)
 }

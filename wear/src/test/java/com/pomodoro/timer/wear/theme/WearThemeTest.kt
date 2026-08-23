@@ -25,4 +25,16 @@ class WearThemeTest {
 
         assertEquals(ColorTheme.entries.size, primaries.distinct().size)
     }
+
+    @Test
+    fun `wearColorScheme carries the palette's core colors into the M3 scheme`() {
+        val palette = wearPaletteFor(ColorTheme.OCEAN)
+
+        val scheme = wearColorScheme(palette)
+
+        assertEquals(palette.primary, scheme.primary)
+        assertEquals(palette.onPrimary, scheme.onPrimary)
+        assertEquals(palette.background, scheme.background)
+        assertEquals(palette.onBackground, scheme.onBackground)
+    }
 }
