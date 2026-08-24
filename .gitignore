@@ -8,8 +8,12 @@ build/
 .externalNativeBuild
 .cxx
 local.properties
+bin/
+obj/
 .superpowers/
 keystore.properties
 keystore/*.jks
 keystore/*.keystore
 .worktrees/
+graphify-out/
+.claude/
