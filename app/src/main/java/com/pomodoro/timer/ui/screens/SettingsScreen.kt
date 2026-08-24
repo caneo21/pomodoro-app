@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -18,10 +19,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,6 +42,9 @@ import com.pomodoro.timer.core.ColorTheme
 import com.pomodoro.timer.core.TimerDefaults
 import com.pomodoro.timer.ui.theme.paletteFor
 import kotlin.math.roundToInt
+
+private val CardShape = RoundedCornerShape(24.dp)
+private val PillShape = RoundedCornerShape(50)
 
 @Composable
 fun SettingsScreen(
@@ -90,210 +97,177 @@ fun SettingsScreen(
         Text("설정", style = MaterialTheme.typography.headlineMedium)
         Spacer(Modifier.height(24.dp))
 
-        Text("집중 시간: ${localFocusMinutes.roundToInt()}분")
-        Slider(
-            value = localFocusMinutes,
-            onValueChange = { localFocusMinutes = it },
-            onValueChangeFinished = { onFocusMinutesChange(localFocusMinutes.roundToInt()) },
-            valueRange = TimerDefaults.MIN_FOCUS_MINUTES.toFloat()..TimerDefaults.MAX_FOCUS_MINUTES.toFloat(),
-            steps = TimerDefaults.MAX_FOCUS_MINUTES - TimerDefaults.MIN_FOCUS_MINUTES - 1,
-            modifier = Modifier.testTag("focusSlider")
-        )
-
-        Spacer(Modifier.height(24.dp))
-        Text("휴식 시간: ${localBreakMinutes.roundToInt()}분")
-        Slider(
-            value = localBreakMinutes,
-            onValueChange = { localBreakMinutes = it },
-            onValueChangeFinished = { onBreakMinutesChange(localBreakMinutes.roundToInt()) },
-            valueRange = TimerDefaults.MIN_BREAK_MINUTES.toFloat()..TimerDefaults.MAX_BREAK_MINUTES.toFloat(),
-            steps = TimerDefaults.MAX_BREAK_MINUTES - TimerDefaults.MIN_BREAK_MINUTES - 1,
-            modifier = Modifier.testTag("breakSlider")
-        )
-
-        Spacer(Modifier.height(24.dp))
-        Text("긴 휴식 시간: ${localLongBreakMinutes.roundToInt()}분")
-        Slider(
-            value = localLongBreakMinutes,
-            onValueChange = { localLongBreakMinutes = it },
-            onValueChangeFinished = { onLongBreakMinutesChange(localLongBreakMinutes.roundToInt()) },
-            valueRange = TimerDefaults.MIN_LONG_BREAK_MINUTES.toFloat()..TimerDefaults.MAX_LONG_BREAK_MINUTES.toFloat(),
-            steps = TimerDefaults.MAX_LONG_BREAK_MINUTES - TimerDefaults.MIN_LONG_BREAK_MINUTES - 1,
-            modifier = Modifier.testTag("longBreakSlider")
-        )
-
-        Spacer(Modifier.height(24.dp))
-        Text("긴 휴식까지 뽀모도로 횟수: ${localPomodorosUntilLongBreak.roundToInt()}회")
-        Slider(
-            value = localPomodorosUntilLongBreak,
-            onValueChange = { localPomodorosUntilLongBreak = it },
-            onValueChangeFinished = { onPomodorosUntilLongBreakChange(localPomodorosUntilLongBreak.roundToInt()) },
-            valueRange = TimerDefaults.MIN_POMODOROS_UNTIL_LONG_BREAK.toFloat()..TimerDefaults.MAX_POMODOROS_UNTIL_LONG_BREAK.toFloat(),
-            steps = TimerDefaults.MAX_POMODOROS_UNTIL_LONG_BREAK - TimerDefaults.MIN_POMODOROS_UNTIL_LONG_BREAK - 1,
-            modifier = Modifier.testTag("pomodorosUntilLongBreakSlider")
-        )
-
-        Spacer(Modifier.height(24.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        SettingsCard {
             Text(
-                "자동으로 휴식 시작",
-                modifier = Modifier.weight(1f).testTag("autoStartBreakLabel")
+                "집중 시간: ${localFocusMinutes.roundToInt()}분",
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Switch(
-                checked = autoStartBreak,
-                onCheckedChange = onAutoStartBreakChange,
-                modifier = Modifier.testTag("autoStartBreakSwitch")
+            Slider(
+                value = localFocusMinutes,
+                onValueChange = { localFocusMinutes = it },
+                onValueChangeFinished = { onFocusMinutesChange(localFocusMinutes.roundToInt()) },
+                valueRange = TimerDefaults.MIN_FOCUS_MINUTES.toFloat()..TimerDefaults.MAX_FOCUS_MINUTES.toFloat(),
+                steps = TimerDefaults.MAX_FOCUS_MINUTES - TimerDefaults.MIN_FOCUS_MINUTES - 1,
+                modifier = Modifier.testTag("focusSlider")
+            )
+
+            Spacer(Modifier.height(16.dp))
+            Text(
+                "휴식 시간: ${localBreakMinutes.roundToInt()}분",
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Slider(
+                value = localBreakMinutes,
+                onValueChange = { localBreakMinutes = it },
+                onValueChangeFinished = { onBreakMinutesChange(localBreakMinutes.roundToInt()) },
+                valueRange = TimerDefaults.MIN_BREAK_MINUTES.toFloat()..TimerDefaults.MAX_BREAK_MINUTES.toFloat(),
+                steps = TimerDefaults.MAX_BREAK_MINUTES - TimerDefaults.MIN_BREAK_MINUTES - 1,
+                modifier = Modifier.testTag("breakSlider")
+            )
+
+            Spacer(Modifier.height(16.dp))
+            Text(
+                "긴 휴식 시간: ${localLongBreakMinutes.roundToInt()}분",
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Slider(
+                value = localLongBreakMinutes,
+                onValueChange = { localLongBreakMinutes = it },
+                onValueChangeFinished = { onLongBreakMinutesChange(localLongBreakMinutes.roundToInt()) },
+                valueRange = TimerDefaults.MIN_LONG_BREAK_MINUTES.toFloat()..TimerDefaults.MAX_LONG_BREAK_MINUTES.toFloat(),
+                steps = TimerDefaults.MAX_LONG_BREAK_MINUTES - TimerDefaults.MIN_LONG_BREAK_MINUTES - 1,
+                modifier = Modifier.testTag("longBreakSlider")
+            )
+
+            Spacer(Modifier.height(16.dp))
+            Text(
+                "긴 휴식까지 뽀모도로 횟수: ${localPomodorosUntilLongBreak.roundToInt()}회",
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Slider(
+                value = localPomodorosUntilLongBreak,
+                onValueChange = { localPomodorosUntilLongBreak = it },
+                onValueChangeFinished = { onPomodorosUntilLongBreakChange(localPomodorosUntilLongBreak.roundToInt()) },
+                valueRange = TimerDefaults.MIN_POMODOROS_UNTIL_LONG_BREAK.toFloat()..TimerDefaults.MAX_POMODOROS_UNTIL_LONG_BREAK.toFloat(),
+                steps = TimerDefaults.MAX_POMODOROS_UNTIL_LONG_BREAK - TimerDefaults.MIN_POMODOROS_UNTIL_LONG_BREAK - 1,
+                modifier = Modifier.testTag("pomodorosUntilLongBreakSlider")
             )
         }
 
         Spacer(Modifier.height(16.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        SettingsCard {
+            SettingsSwitchRow("자동으로 휴식 시작", "autoStartBreakLabel", "autoStartBreakSwitch", autoStartBreak, onAutoStartBreakChange)
+            Spacer(Modifier.height(16.dp))
+            SettingsSwitchRow("자동으로 다음 뽀모도로 시작", "autoStartFocusLabel", "autoStartFocusSwitch", autoStartFocus, onAutoStartFocusChange)
+            Spacer(Modifier.height(16.dp))
+            SettingsSwitchRow("화면 꺼짐 방지", "keepScreenOnLabel", "keepScreenOnSwitch", keepScreenOn, onKeepScreenOnChange)
+        }
+
+        Spacer(Modifier.height(16.dp))
+        SettingsCard {
+            SettingsSwitchRow("일일 목표 사용", "dailyGoalEnabledLabel", "dailyGoalEnabledSwitch", dailyGoalEnabled, onDailyGoalEnabledChange)
+            Spacer(Modifier.height(16.dp))
             Text(
-                "자동으로 다음 뽀모도로 시작",
-                modifier = Modifier.weight(1f).testTag("autoStartFocusLabel")
+                "일일 목표: ${localDailyGoalTarget.roundToInt()}개",
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Switch(
-                checked = autoStartFocus,
-                onCheckedChange = onAutoStartFocusChange,
-                modifier = Modifier.testTag("autoStartFocusSwitch")
+            Slider(
+                value = localDailyGoalTarget,
+                onValueChange = { localDailyGoalTarget = it },
+                onValueChangeFinished = { onDailyGoalTargetChange(localDailyGoalTarget.roundToInt()) },
+                valueRange = TimerDefaults.MIN_DAILY_GOAL_TARGET.toFloat()..TimerDefaults.MAX_DAILY_GOAL_TARGET.toFloat(),
+                steps = TimerDefaults.MAX_DAILY_GOAL_TARGET - TimerDefaults.MIN_DAILY_GOAL_TARGET - 1,
+                modifier = Modifier.testTag("dailyGoalTargetSlider")
             )
         }
 
         Spacer(Modifier.height(16.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                "화면 꺼짐 방지",
-                modifier = Modifier.weight(1f).testTag("keepScreenOnLabel")
-            )
-            Switch(
-                checked = keepScreenOn,
-                onCheckedChange = onKeepScreenOnChange,
-                modifier = Modifier.testTag("keepScreenOnSwitch")
-            )
+        SettingsCard {
+            SettingsSwitchRow("알림 사용", "notificationsEnabledLabel", "notificationsEnabledSwitch", notificationsEnabled, onNotificationsEnabledChange)
+            Spacer(Modifier.height(16.dp))
+            SettingsSwitchRow("진동", "vibrationEnabledLabel", "vibrationEnabledSwitch", vibrationEnabled, onVibrationEnabledChange)
+            Spacer(Modifier.height(16.dp))
+            SettingsSwitchRow("알람음 사용 (끄면 알림음)", "useAlarmSoundLabel", "useAlarmSoundSwitch", useAlarmSound, onUseAlarmSoundChange)
         }
 
         Spacer(Modifier.height(16.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                "일일 목표 사용",
-                modifier = Modifier.weight(1f).testTag("dailyGoalEnabledLabel")
-            )
-            Switch(
-                checked = dailyGoalEnabled,
-                onCheckedChange = onDailyGoalEnabledChange,
-                modifier = Modifier.testTag("dailyGoalEnabledSwitch")
-            )
-        }
-
-        Spacer(Modifier.height(24.dp))
-        Text("일일 목표: ${localDailyGoalTarget.roundToInt()}개")
-        Slider(
-            value = localDailyGoalTarget,
-            onValueChange = { localDailyGoalTarget = it },
-            onValueChangeFinished = { onDailyGoalTargetChange(localDailyGoalTarget.roundToInt()) },
-            valueRange = TimerDefaults.MIN_DAILY_GOAL_TARGET.toFloat()..TimerDefaults.MAX_DAILY_GOAL_TARGET.toFloat(),
-            steps = TimerDefaults.MAX_DAILY_GOAL_TARGET - TimerDefaults.MIN_DAILY_GOAL_TARGET - 1,
-            modifier = Modifier.testTag("dailyGoalTargetSlider")
-        )
-
-        Spacer(Modifier.height(24.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                "알림 사용",
-                modifier = Modifier.weight(1f).testTag("notificationsEnabledLabel")
-            )
-            Switch(
-                checked = notificationsEnabled,
-                onCheckedChange = onNotificationsEnabledChange,
-                modifier = Modifier.testTag("notificationsEnabledSwitch")
-            )
-        }
-
-        Spacer(Modifier.height(16.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                "진동",
-                modifier = Modifier.weight(1f).testTag("vibrationEnabledLabel")
-            )
-            Switch(
-                checked = vibrationEnabled,
-                onCheckedChange = onVibrationEnabledChange,
-                modifier = Modifier.testTag("vibrationEnabledSwitch")
-            )
-        }
-
-        Spacer(Modifier.height(16.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                "알람음 사용 (끄면 알림음)",
-                modifier = Modifier.weight(1f).testTag("useAlarmSoundLabel")
-            )
-            Switch(
-                checked = useAlarmSound,
-                onCheckedChange = onUseAlarmSoundChange,
-                modifier = Modifier.testTag("useAlarmSoundSwitch")
-            )
-        }
-
-        Spacer(Modifier.height(24.dp))
-        Text("테마")
-        Spacer(Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            for (theme in ColorTheme.entries) {
-                val swatchColor = paletteFor(theme, darkTheme = false).primary
-                val isSelected = theme == colorTheme
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(swatchColor)
-                        .border(
-                            width = if (isSelected) 3.dp else 0.dp,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            shape = CircleShape
-                        )
-                        .clickable { onColorThemeChange(theme) }
-                        .testTag("colorThemeSwatch_${theme.name}")
-                )
+        SettingsCard {
+            Text("테마", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                for (theme in ColorTheme.entries) {
+                    val swatchColor = paletteFor(theme, darkTheme = false).accent
+                    val isSelected = theme == colorTheme
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(swatchColor)
+                            .border(
+                                width = if (isSelected) 3.dp else 0.dp,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                shape = CircleShape
+                            )
+                            .clickable { onColorThemeChange(theme) }
+                            .testTag("colorThemeSwatch_${theme.name}")
+                    )
+                }
             }
         }
 
         Spacer(Modifier.height(24.dp))
-        Button(onClick = onReplayOnboarding, modifier = Modifier.testTag("replayOnboardingButton")) {
+        Button(
+            onClick = onReplayOnboarding,
+            shape = PillShape,
+            modifier = Modifier.fillMaxWidth().testTag("replayOnboardingButton")
+        ) {
             Text("앱 사용법 다시보기")
         }
 
-        Spacer(Modifier.height(24.dp))
-        Button(onClick = onBack, modifier = Modifier.testTag("backButton")) {
+        Spacer(Modifier.height(12.dp))
+        OutlinedButton(
+            onClick = onBack,
+            shape = PillShape,
+            modifier = Modifier.fillMaxWidth().testTag("backButton")
+        ) {
             Text("뒤로")
         }
+    }
+}
+
+@Composable
+private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        shape = CardShape,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(20.dp), content = content)
+    }
+}
+
+@Composable
+private fun SettingsSwitchRow(
+    label: String,
+    labelTag: String,
+    switchTag: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            label,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f).testTag(labelTag)
+        )
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            modifier = Modifier.testTag(switchTag)
+        )
     }
 }

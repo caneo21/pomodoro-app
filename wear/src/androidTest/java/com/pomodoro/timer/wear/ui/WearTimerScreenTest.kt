@@ -1,5 +1,9 @@
 package com.pomodoro.timer.wear.ui
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -61,6 +65,40 @@ class WearTimerScreenTest {
         composeRule.waitForIdle()
 
         assertTrue(pauseClicked)
+    }
+
+    @Test
+    fun tap_afterRecomposingToRunning_invokesOnPause_notOnStartAgain() {
+        var startCount = 0
+        var pauseCount = 0
+        var isRunning by mutableStateOf(false)
+        composeRule.setContent {
+            PomodoroWearTheme {
+                WearTimerScreen(
+                    uiState = WearTimerUiState(isRunning = isRunning),
+                    isAmbient = false,
+                    onStart = { startCount++; isRunning = true },
+                    onPause = { pauseCount++ },
+                    onReset = {}
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("timerTapArea").performTouchInput {
+            down(center)
+            up()
+        }
+        composeRule.waitForIdle()
+        assertTrue("first tap while idle should start the timer", startCount == 1)
+
+        composeRule.onNodeWithTag("timerTapArea").performTouchInput {
+            down(center)
+            up()
+        }
+        composeRule.waitForIdle()
+
+        assertTrue("second tap while running should pause, not start again", pauseCount == 1)
+        assertTrue("second tap while running must not call onStart again", startCount == 1)
     }
 
     @Test
@@ -148,8 +186,8 @@ class WearTimerScreenTest {
             }
         }
 
-        composeRule.onNodeWithTag("cycleProgressText").assertExists()
-        composeRule.onNodeWithText("2/4").assertExists()
+        composeRule.onNodeWithTag("cycleProgressIndicator").assertExists()
+        composeRule.onNode(hasContentDescription("2/4")).assertExists()
     }
 
     @Test

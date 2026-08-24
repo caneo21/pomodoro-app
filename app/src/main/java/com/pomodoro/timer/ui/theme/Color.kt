@@ -4,24 +4,69 @@ import androidx.compose.ui.graphics.Color
 import com.pomodoro.timer.core.ColorTheme
 
 data class PomodoroPalette(
-    val primary: Color,
-    val onPrimary: Color,
     val background: Color,
+    val surface: Color,
+    val textPrimary: Color,
+    val textSecondary: Color,
+    val border: Color,
+    val accent: Color,
+    val onAccent: Color,
     val longBreakAccent: Color
 )
 
+// Shared minimal-monochrome tokens (docs/superpowers/specs/2026-08-23-modern-design-tokens-design.md,
+// Section A). Neutrals and long-break accent are identical across all 4 themes; only accent/onAccent
+// vary per theme.
+private val DarkNeutralBackground = Color(0xFF0D0D0F)
+private val DarkNeutralSurface = Color(0xFF17171A)
+private val DarkNeutralTextPrimary = Color(0xFFF2F2F4)
+private val DarkNeutralTextSecondary = Color(0xFF8A8A92)
+private val DarkNeutralBorder = Color(0xFF2A2A2E)
+private val DarkLongBreakAccent = Color(0xFF6B7BFF)
+
+private val LightNeutralBackground = Color(0xFFFAFAF9)
+private val LightNeutralSurface = Color(0xFFFFFFFF)
+private val LightNeutralTextPrimary = Color(0xFF17171A)
+private val LightNeutralTextSecondary = Color(0xFF6B6B72)
+private val LightNeutralBorder = Color(0xFFE4E4E7)
+private val LightLongBreakAccent = Color(0xFF4A57C7)
+
 private val LightPalettes: Map<ColorTheme, PomodoroPalette> = mapOf(
-    ColorTheme.DEFAULT to PomodoroPalette(Color(0xFFE85D4A), Color(0xFFFFFFFF), Color(0xFFFFFBF7), Color(0xFF5C6BC0)),
-    ColorTheme.OCEAN to PomodoroPalette(Color(0xFF1E88E5), Color(0xFFFFFFFF), Color(0xFFF5FAFF), Color(0xFF26A69A)),
-    ColorTheme.FOREST to PomodoroPalette(Color(0xFF43A047), Color(0xFFFFFFFF), Color(0xFFF6FBF4), Color(0xFFFB8C00)),
-    ColorTheme.LAVENDER to PomodoroPalette(Color(0xFF8E5DE8), Color(0xFFFFFFFF), Color(0xFFFAF7FF), Color(0xFFEC407A))
+    ColorTheme.DEFAULT to PomodoroPalette(
+        LightNeutralBackground, LightNeutralSurface, LightNeutralTextPrimary, LightNeutralTextSecondary,
+        LightNeutralBorder, accent = Color(0xFFE14B34), onAccent = Color(0xFFFFFFFF), longBreakAccent = LightLongBreakAccent
+    ),
+    ColorTheme.OCEAN to PomodoroPalette(
+        LightNeutralBackground, LightNeutralSurface, LightNeutralTextPrimary, LightNeutralTextSecondary,
+        LightNeutralBorder, accent = Color(0xFF1E76E0), onAccent = Color(0xFFFFFFFF), longBreakAccent = LightLongBreakAccent
+    ),
+    ColorTheme.FOREST to PomodoroPalette(
+        LightNeutralBackground, LightNeutralSurface, LightNeutralTextPrimary, LightNeutralTextSecondary,
+        LightNeutralBorder, accent = Color(0xFF2E8F45), onAccent = Color(0xFFFFFFFF), longBreakAccent = LightLongBreakAccent
+    ),
+    ColorTheme.LAVENDER to PomodoroPalette(
+        LightNeutralBackground, LightNeutralSurface, LightNeutralTextPrimary, LightNeutralTextSecondary,
+        LightNeutralBorder, accent = Color(0xFF7C4FD6), onAccent = Color(0xFFFFFFFF), longBreakAccent = LightLongBreakAccent
+    )
 )
 
 private val DarkPalettes: Map<ColorTheme, PomodoroPalette> = mapOf(
-    ColorTheme.DEFAULT to PomodoroPalette(Color(0xFFE85D4A), Color(0xFFFFFFFF), Color(0xFF1C1614), Color(0xFF7986CB)),
-    ColorTheme.OCEAN to PomodoroPalette(Color(0xFF64B5F6), Color(0xFF00263D), Color(0xFF0D1B24), Color(0xFF4DB6AC)),
-    ColorTheme.FOREST to PomodoroPalette(Color(0xFF81C784), Color(0xFF0B3B12), Color(0xFF10190F), Color(0xFFFFB74D)),
-    ColorTheme.LAVENDER to PomodoroPalette(Color(0xFFB69CF0), Color(0xFF2C0F5C), Color(0xFF16101F), Color(0xFFF06292))
+    ColorTheme.DEFAULT to PomodoroPalette(
+        DarkNeutralBackground, DarkNeutralSurface, DarkNeutralTextPrimary, DarkNeutralTextSecondary,
+        DarkNeutralBorder, accent = Color(0xFFFF6B57), onAccent = Color(0xFFFFFFFF), longBreakAccent = DarkLongBreakAccent
+    ),
+    ColorTheme.OCEAN to PomodoroPalette(
+        DarkNeutralBackground, DarkNeutralSurface, DarkNeutralTextPrimary, DarkNeutralTextSecondary,
+        DarkNeutralBorder, accent = Color(0xFF5AA9FF), onAccent = Color(0xFF00263D), longBreakAccent = DarkLongBreakAccent
+    ),
+    ColorTheme.FOREST to PomodoroPalette(
+        DarkNeutralBackground, DarkNeutralSurface, DarkNeutralTextPrimary, DarkNeutralTextSecondary,
+        DarkNeutralBorder, accent = Color(0xFF6FCB7A), onAccent = Color(0xFF0B3B12), longBreakAccent = DarkLongBreakAccent
+    ),
+    ColorTheme.LAVENDER to PomodoroPalette(
+        DarkNeutralBackground, DarkNeutralSurface, DarkNeutralTextPrimary, DarkNeutralTextSecondary,
+        DarkNeutralBorder, accent = Color(0xFFB08CF0), onAccent = Color(0xFF2C0F5C), longBreakAccent = DarkLongBreakAccent
+    )
 )
 
 fun paletteFor(theme: ColorTheme, darkTheme: Boolean): PomodoroPalette =

@@ -1,4 +1,4 @@
-package com.pomodoro.timer.wear.ui
+package com.pomodoro.timer.core
 
 import org.junit.Assert.assertEquals
 import org.junit.Before

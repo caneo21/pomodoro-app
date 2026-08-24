@@ -10,6 +10,7 @@ public sealed record TimerSettings(
     bool AutoStartBreak = false,
     bool AutoStartFocus = false,
     bool KeepScreenOn = false,
+    bool ShowTaskbarBadge = true,
     bool DailyGoalEnabled = false,
     int DailyGoalTarget = TimerDefaults.DefaultDailyGoalTarget,
     bool NotificationsEnabled = true,

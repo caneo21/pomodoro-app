@@ -19,6 +19,7 @@ public sealed class ApplicationDataSettingsStore : ISettingsStore
             AutoStartBreak: GetBool(nameof(TimerSettings.AutoStartBreak), defaults.AutoStartBreak),
             AutoStartFocus: GetBool(nameof(TimerSettings.AutoStartFocus), defaults.AutoStartFocus),
             KeepScreenOn: GetBool(nameof(TimerSettings.KeepScreenOn), defaults.KeepScreenOn),
+            ShowTaskbarBadge: GetBool(nameof(TimerSettings.ShowTaskbarBadge), defaults.ShowTaskbarBadge),
             DailyGoalEnabled: GetBool(nameof(TimerSettings.DailyGoalEnabled), defaults.DailyGoalEnabled),
             DailyGoalTarget: GetInt(nameof(TimerSettings.DailyGoalTarget), defaults.DailyGoalTarget),
             NotificationsEnabled: GetBool(nameof(TimerSettings.NotificationsEnabled), defaults.NotificationsEnabled),
@@ -37,6 +38,7 @@ public sealed class ApplicationDataSettingsStore : ISettingsStore
         _container.Values[nameof(TimerSettings.AutoStartBreak)] = settings.AutoStartBreak;
         _container.Values[nameof(TimerSettings.AutoStartFocus)] = settings.AutoStartFocus;
         _container.Values[nameof(TimerSettings.KeepScreenOn)] = settings.KeepScreenOn;
+        _container.Values[nameof(TimerSettings.ShowTaskbarBadge)] = settings.ShowTaskbarBadge;
         _container.Values[nameof(TimerSettings.DailyGoalEnabled)] = settings.DailyGoalEnabled;
         _container.Values[nameof(TimerSettings.DailyGoalTarget)] = settings.DailyGoalTarget;
         _container.Values[nameof(TimerSettings.NotificationsEnabled)] = settings.NotificationsEnabled;

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -55,9 +56,17 @@ fun OnboardingScreen(onFinish: () -> Unit, modifier: Modifier = Modifier) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Text(text = page.title, style = MaterialTheme.typography.headlineSmall)
+                Text(
+                    text = page.title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
                 Spacer(Modifier.size(16.dp))
-                Text(text = page.body, style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    text = page.body,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
 
@@ -107,6 +116,7 @@ fun OnboardingScreen(onFinish: () -> Unit, modifier: Modifier = Modifier) {
                         }
                     }
                 },
+                shape = RoundedCornerShape(50),
                 modifier = Modifier.testTag("onboardingNextButton")
             ) {
                 Text(if (isLastPage) "시작하기" else "다음")

@@ -8,6 +8,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -15,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
@@ -29,6 +31,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -42,6 +46,7 @@ import androidx.wear.compose.material3.LocalTextStyle
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ProgressIndicatorDefaults
 import androidx.wear.compose.material3.Text
+import com.pomodoro.timer.core.TapOrHoldResetGesture
 import com.pomodoro.timer.core.TimerPhase
 import com.pomodoro.timer.wear.R
 import com.pomodoro.timer.wear.theme.WearLongBreakAccent
@@ -113,16 +118,20 @@ fun WearTimerScreen(
 
     var holdProgress by remember { mutableFloatStateOf(0f) }
     val haptics = LocalHapticFeedback.current
+    val currentIsRunning = rememberUpdatedState(uiState.isRunning)
+    val currentOnStart = rememberUpdatedState(onStart)
+    val currentOnPause = rememberUpdatedState(onPause)
+    val currentOnReset = rememberUpdatedState(onReset)
     val gesture = remember {
         TapOrHoldResetGesture(
             holdThresholdMillis = RESET_HOLD_MILLIS,
             onTap = {
                 haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                if (uiState.isRunning) onPause() else onStart()
+                if (currentIsRunning.value) currentOnPause.value() else currentOnStart.value()
             },
             onReset = {
                 haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                onReset()
+                currentOnReset.value()
             }
         )
     }
@@ -158,10 +167,8 @@ fun WearTimerScreen(
             }
             .testTag("timerTapArea"),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween
+        verticalArrangement = Arrangement.Center
     ) {
-        Text(text = phaseLabel(uiState.phase), style = MaterialTheme.typography.titleMedium)
-
         val holdStrokeWidthPx = with(LocalDensity.current) {
             CircularProgressIndicatorDefaults.smallStrokeWidth.toPx()
         }
@@ -204,24 +211,55 @@ fun WearTimerScreen(
                     )
                 }
             }
-            Text(
-                text = remainingText,
-                style = wearTimerDigitFontStyle(MaterialTheme.typography.displaySmall)
-            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = phaseIcon(uiState.phase),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier
+                        .semantics { contentDescription = phaseLabel(uiState.phase) }
+                        .testTag("phaseIndicator")
+                )
+                Text(
+                    text = remainingText,
+                    style = wearTimerDigitFontStyle(MaterialTheme.typography.displaySmall)
+                )
+                CycleProgressDots(
+                    completed = uiState.completedPomodoros,
+                    total = uiState.pomodorosUntilLongBreak,
+                    dotColor = animatedRingColor
+                )
+            }
         }
 
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        if (!uiState.isRunning && holdProgress == 0f) {
             Text(
-                text = "${uiState.completedPomodoros}/${uiState.pomodorosUntilLongBreak}",
+                text = "탭하여 시작 · 길게 눌러 리셋",
                 style = MaterialTheme.typography.labelSmall,
-                modifier = Modifier.testTag("cycleProgressText")
+                modifier = Modifier
+                    .padding(top = 8.dp)
+                    .testTag("gestureHint")
             )
-            if (!uiState.isRunning && holdProgress == 0f) {
-                Text(
-                    text = "탭하여 시작 · 길게 눌러 리셋",
-                    style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier.testTag("gestureHint")
-                )
+        }
+    }
+}
+
+@Composable
+private fun CycleProgressDots(
+    completed: Int,
+    total: Int,
+    dotColor: Color,
+    modifier: Modifier = Modifier
+) {
+    val emptyDotColor = dotColor.copy(alpha = 0.3f)
+    Row(
+        modifier = modifier
+            .semantics { contentDescription = "$completed/$total" }
+            .testTag("cycleProgressIndicator"),
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        dotFillStates(completed, total).forEach { filled ->
+            Canvas(modifier = Modifier.size(6.dp)) {
+                drawCircle(color = if (filled) dotColor else emptyDotColor)
             }
         }
     }
@@ -235,6 +273,15 @@ private fun phaseLabel(phase: TimerPhase): String = when (phase) {
     TimerPhase.SHORT_BREAK -> "휴식"
     TimerPhase.LONG_BREAK -> "긴 휴식"
 }
+
+internal fun phaseIcon(phase: TimerPhase): String = when (phase) {
+    TimerPhase.FOCUS -> "🎯"
+    TimerPhase.SHORT_BREAK -> "☕"
+    TimerPhase.LONG_BREAK -> "🌙"
+}
+
+internal fun dotFillStates(completed: Int, total: Int): List<Boolean> =
+    List(total) { it < completed }
 
 fun formatWearMillis(millis: Long): String {
     val totalSeconds = (millis / 1000).coerceAtLeast(0)

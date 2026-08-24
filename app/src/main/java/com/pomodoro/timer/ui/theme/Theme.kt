@@ -12,9 +12,27 @@ fun PomodoroTheme(colorTheme: ColorTheme = ColorTheme.DEFAULT, content: @Composa
     val darkTheme = isSystemInDarkTheme()
     val palette = paletteFor(colorTheme, darkTheme)
     val colors = if (darkTheme) {
-        darkColorScheme(primary = palette.primary, onPrimary = palette.onPrimary, background = palette.background)
+        darkColorScheme(
+            primary = palette.accent,
+            onPrimary = palette.onAccent,
+            background = palette.background,
+            surface = palette.surface,
+            onBackground = palette.textPrimary,
+            onSurface = palette.textPrimary,
+            onSurfaceVariant = palette.textSecondary,
+            outline = palette.border
+        )
     } else {
-        lightColorScheme(primary = palette.primary, onPrimary = palette.onPrimary, background = palette.background)
+        lightColorScheme(
+            primary = palette.accent,
+            onPrimary = palette.onAccent,
+            background = palette.background,
+            surface = palette.surface,
+            onBackground = palette.textPrimary,
+            onSurface = palette.textPrimary,
+            onSurfaceVariant = palette.textSecondary,
+            outline = palette.border
+        )
     }
     MaterialTheme(
         colorScheme = colors,

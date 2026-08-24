@@ -17,6 +17,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool autoStartBreak;
     [ObservableProperty] private bool autoStartFocus;
     [ObservableProperty] private bool keepScreenOn;
+    [ObservableProperty] private bool showTaskbarBadge;
     [ObservableProperty] private bool dailyGoalEnabled;
     [ObservableProperty] private int dailyGoalTarget;
     [ObservableProperty] private bool notificationsEnabled;
@@ -36,6 +37,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         autoStartBreak = s.AutoStartBreak;
         autoStartFocus = s.AutoStartFocus;
         keepScreenOn = s.KeepScreenOn;
+        showTaskbarBadge = s.ShowTaskbarBadge;
         dailyGoalEnabled = s.DailyGoalEnabled;
         dailyGoalTarget = s.DailyGoalTarget;
         notificationsEnabled = s.NotificationsEnabled;
@@ -50,7 +52,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         var current = _settingsStore.Load();
         var settings = new TimerSettings(
             FocusMinutes, BreakMinutes, LongBreakMinutes, PomodorosUntilLongBreak,
-            AutoStartBreak, AutoStartFocus, KeepScreenOn, DailyGoalEnabled, DailyGoalTarget,
+            AutoStartBreak, AutoStartFocus, KeepScreenOn, ShowTaskbarBadge, DailyGoalEnabled, DailyGoalTarget,
             NotificationsEnabled, UseAlarmSound, ColorTheme,
             current.DailyGoalDate, current.DailyGoalCount);
         _settingsStore.Save(settings);

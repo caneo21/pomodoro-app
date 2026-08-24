@@ -97,8 +97,8 @@ class SettingsScreenTest {
         composeRule.onNodeWithTag("autoStartBreakLabel").assertExists()
         composeRule.onNodeWithTag("autoStartFocusLabel").assertExists()
 
-        composeRule.onNodeWithTag("autoStartBreakSwitch").performClick()
-        composeRule.onNodeWithTag("autoStartFocusSwitch").performClick()
+        composeRule.onNodeWithTag("autoStartBreakSwitch").performScrollTo().performClick()
+        composeRule.onNodeWithTag("autoStartFocusSwitch").performScrollTo().performClick()
 
         assertTrue(breakToggled == true)
         assertTrue(focusToggled == true)
@@ -122,7 +122,7 @@ class SettingsScreenTest {
         }
 
         composeRule.onNodeWithTag("keepScreenOnLabel").assertExists()
-        composeRule.onNodeWithTag("keepScreenOnSwitch").performClick()
+        composeRule.onNodeWithTag("keepScreenOnSwitch").performScrollTo().performClick()
 
         assertTrue(keepScreenOnToggled == true)
     }
@@ -150,7 +150,7 @@ class SettingsScreenTest {
         composeRule.onNodeWithTag("dailyGoalEnabledLabel").assertExists()
         composeRule.onNodeWithTag("dailyGoalTargetSlider").assertExists()
 
-        composeRule.onNodeWithTag("dailyGoalEnabledSwitch").performClick()
+        composeRule.onNodeWithTag("dailyGoalEnabledSwitch").performScrollTo().performClick()
 
         assertTrue(enabledToggled == true)
     }
