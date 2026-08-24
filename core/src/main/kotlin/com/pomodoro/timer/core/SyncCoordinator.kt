@@ -75,6 +75,6 @@ class SyncCoordinator(
 
     fun publishLocalState(payload: SyncPayload) {
         lastKnown = payload
-        scope.launch { transport.publish(payload) }
+        scope.launch { runCatching { transport.publish(payload) } }
     }
 }

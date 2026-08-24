@@ -62,6 +62,20 @@ private class HangingSyncTransport : SyncTransport {
     }
 }
 
+/** Always throws from [publish], simulating the Wearable Data Layer being unavailable. */
+private class FailingPublishSyncTransport : SyncTransport {
+    var publishAttempts = 0
+        private set
+
+    override suspend fun publish(payload: SyncPayload) {
+        publishAttempts++
+        throw IllegalStateException("simulated Wearable.API unavailable")
+    }
+
+    override fun observeRemoteState(): Flow<SyncPayload> = MutableSharedFlow()
+    override suspend fun getCurrentRemoteState(): SyncPayload? = null
+}
+
 private fun payload(lastActionAtMillis: Long, isRunning: Boolean = true) = SyncPayload(
     phase = TimerPhase.FOCUS,
     isRunning = isRunning,
@@ -97,6 +111,19 @@ class SyncCoordinatorTest {
 
         assertEquals(1, transport.published.size)
         assertEquals(5_000L, transport.published[0].lastActionAtMillis)
+    }
+
+    @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun `a publish failure is swallowed rather than crashing the scope`() = runTest {
+        val transport = FailingPublishSyncTransport()
+        val coordinator = SyncCoordinator(transport, this) {}
+
+        coordinator.publishLocalState(payload(5_000L))
+        advanceUntilIdle()
+
+        assertEquals(1, transport.publishAttempts)
+        assertTrue(coroutineContext[Job]!!.isActive)
     }
 
     @Test
