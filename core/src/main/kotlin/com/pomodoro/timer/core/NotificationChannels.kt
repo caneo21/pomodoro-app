@@ -16,6 +16,18 @@ object NotificationChannels {
     fun sessionEndChannelId(useAlarmSound: Boolean, vibrationEnabled: Boolean): String =
         channelId(useAlarmSound, vibrationEnabled)
 
+    /**
+     * User-visible channel name. The four channels show up side by side in the system's app
+     * notification settings, so each name spells out its combination. Unlike sound/vibration, a
+     * channel's name can be updated by re-creating it with the same id, so existing installs pick
+     * this up on the next service start.
+     */
+    fun sessionEndChannelName(useAlarmSound: Boolean, vibrationEnabled: Boolean): String {
+        val sound = if (useAlarmSound) "알람음" else "알림음"
+        val vibration = if (vibrationEnabled) "진동" else "진동 없음"
+        return "세션 종료 · $sound · $vibration"
+    }
+
     private fun channelId(useAlarmSound: Boolean, vibrationEnabled: Boolean): String {
         val sound = if (useAlarmSound) "alarm" else "notif"
         val vibration = if (vibrationEnabled) "vib" else "novib"

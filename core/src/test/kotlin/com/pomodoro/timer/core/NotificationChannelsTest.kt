@@ -26,6 +26,14 @@ class NotificationChannelsTest {
     }
 
     @Test
+    fun `sessionEndChannelName spells out the sound and vibration of each combination`() {
+        assertEquals("세션 종료 · 알림음 · 진동", NotificationChannels.sessionEndChannelName(useAlarmSound = false, vibrationEnabled = true))
+        assertEquals("세션 종료 · 알림음 · 진동 없음", NotificationChannels.sessionEndChannelName(useAlarmSound = false, vibrationEnabled = false))
+        assertEquals("세션 종료 · 알람음 · 진동", NotificationChannels.sessionEndChannelName(useAlarmSound = true, vibrationEnabled = true))
+        assertEquals("세션 종료 · 알람음 · 진동 없음", NotificationChannels.sessionEndChannelName(useAlarmSound = true, vibrationEnabled = false))
+    }
+
+    @Test
     fun `allSessionEndChannelIds lists exactly the four combinations`() {
         val expected = setOf(
             NotificationChannels.sessionEndChannelId(useAlarmSound = false, vibrationEnabled = true),

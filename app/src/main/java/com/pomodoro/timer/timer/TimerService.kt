@@ -333,7 +333,8 @@ class TimerService : Service() {
             for (useAlarm in listOf(false, true)) {
                 for (vibrate in listOf(false, true)) {
                     val channelId = NotificationChannels.sessionEndChannelId(useAlarm, vibrate)
-                    val channel = NotificationChannel(channelId, "세션 종료 알림", NotificationManager.IMPORTANCE_HIGH).apply {
+                    val channelName = NotificationChannels.sessionEndChannelName(useAlarm, vibrate)
+                    val channel = NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_HIGH).apply {
                         enableVibration(vibrate)
                         setSound(
                             RingtoneManager.getDefaultUri(
