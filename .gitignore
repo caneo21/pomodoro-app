@@ -14,6 +14,8 @@ obj/
 keystore.properties
 keystore/*.jks
 keystore/*.keystore
+keystore/*.pfx
+keystore/*.cer
 .worktrees/
 graphify-out/
 .claude/
