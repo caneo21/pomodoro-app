@@ -29,6 +29,7 @@ public sealed partial class SettingsPage : Page
         LoadIntoControls();
         ApplyPaletteToChrome();
         PressScaleBehavior.Attach(BackButton);
+        VersionText.Text = Services.AppVersion.Current is { } version ? $"현재 버전 {version}" : "";
     }
 
     private void ApplyPaletteToChrome()

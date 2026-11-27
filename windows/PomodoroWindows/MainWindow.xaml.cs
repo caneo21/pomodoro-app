@@ -2,7 +2,9 @@ using System.Runtime.InteropServices;
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using PomodoroWindows.Core;
 using Windows.Graphics;
 using Windows.Storage;
 
@@ -36,6 +38,67 @@ public sealed partial class MainWindow : Window
     public static MainWindow? Current { get; private set; }
 
     public bool AllowClose { get; set; }
+
+    // "New version available" banner. Hidden while a session runs (it would pull attention away
+    // from focusing) and in mini mode (no room); it comes back when neither applies.
+    private LatestRelease? _updateRelease;
+    private bool _timerRunning;
+    private bool _miniMode;
+    private double? _lastContentWidthDips;
+    private double? _lastContentHeightDips;
+
+    /// <summary>Raised with the release's tag when the user closes the banner with its X button.</summary>
+    public event Action<string>? UpdateDismissed;
+
+    public void SetUpdateRelease(LatestRelease? release)
+    {
+        _updateRelease = release;
+        RefreshUpdateInfoBar();
+    }
+
+    public void SetTimerRunning(bool isRunning)
+    {
+        _timerRunning = isRunning;
+        RefreshUpdateInfoBar();
+    }
+
+    private void RefreshUpdateInfoBar()
+    {
+        if (_updateRelease is { } release)
+        {
+            UpdateInfoBar.Message = $"새 버전 {release.Tag}이 있어요";
+        }
+        UpdateInfoBar.IsOpen = _updateRelease is not null && !_timerRunning && !_miniMode;
+        RefitToLastContent();
+    }
+
+    private void UpdateInfoBar_Closed(InfoBar sender, InfoBarClosedEventArgs args)
+    {
+        // Programmatic closes (session started, mini mode) only hide it for now; the X button
+        // dismisses this version for good.
+        if (args.Reason != InfoBarCloseReason.CloseButton || _updateRelease is not { } release) return;
+        _updateRelease = null;
+        UpdateDismissed?.Invoke(release.Tag);
+        RefitToLastContent();
+    }
+
+    private async void UpdateDownloadButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_updateRelease is { } release && Uri.TryCreate(release.Url, UriKind.Absolute, out var uri))
+        {
+            await Windows.System.Launcher.LaunchUriAsync(uri);
+        }
+    }
+
+    private void UpdateInfoBar_SizeChanged(object sender, SizeChangedEventArgs e) => RefitToLastContent();
+
+    private void RefitToLastContent()
+    {
+        if (_lastContentWidthDips is { } width && _lastContentHeightDips is { } height)
+        {
+            FitToContent(width, height);
+        }
+    }
 
     public MainWindow()
     {
@@ -90,8 +153,15 @@ public sealed partial class MainWindow : Window
     // the actual minimum it needs instead of a guessed placeholder size.
     public void FitToContent(double contentWidthDips, double contentHeightDips)
     {
+        _lastContentWidthDips = contentWidthDips;
+        _lastContentHeightDips = contentHeightDips;
+        var infoBarHeightDips = UpdateInfoBar.IsOpen
+            ? (int)Math.Ceiling(UpdateInfoBar.ActualHeight + UpdateInfoBar.Margin.Top + UpdateInfoBar.Margin.Bottom)
+            : 0;
         var width = Math.Max((int)Math.Ceiling(contentWidthDips) + ContentHorizontalPaddingDips, MinWindowWidthDips);
-        var height = Math.Max((int)Math.Ceiling(contentHeightDips) + TitleBarHeightDips + ContentVerticalPaddingDips, MinWindowHeightDips);
+        var height = Math.Max(
+            (int)Math.Ceiling(contentHeightDips) + TitleBarHeightDips + ContentVerticalPaddingDips + infoBarHeightDips,
+            MinWindowHeightDips);
 
         _suppressPositionSave = true;
         if (_hasCustomPosition)
@@ -131,6 +201,8 @@ public sealed partial class MainWindow : Window
     private void TimerPage_MiniModeChanged(object? sender, bool isMiniMode)
     {
         ModeToggleButton.Content = isMiniMode ? "전체" : "미니";
+        _miniMode = isMiniMode;
+        RefreshUpdateInfoBar();
         // Windows only ever blurs the desktop wallpaper through a backdrop, never other apps'
         // actual window content (removed for privacy reasons since the Aero Glass era) — so this
         // just gives the mini widget the standard frosted-glass look, not literal see-through.

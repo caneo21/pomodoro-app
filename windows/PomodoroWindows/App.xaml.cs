@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using Microsoft.UI.Xaml;
 using Microsoft.Windows.AppNotifications;
+using PomodoroWindows.Core;
 using PomodoroWindows.Services;
 using PomodoroWindows.ViewModels;
 using PomodoroWindows.Views;
@@ -45,6 +46,7 @@ public partial class App : Application
             if (e.PropertyName == nameof(TimerViewModel.IsRunning))
             {
                 UpdateKeepAwake();
+                (_window as MainWindow)?.SetTimerRunning(timerViewModel.IsRunning);
             }
         };
 
@@ -56,6 +58,7 @@ public partial class App : Application
         _tickService.Start();
 
         _window.Activate();
+        _ = ShowUpdateBannerAsync((MainWindow)_window, timerViewModel);
 
         var trayIconService = new TrayIconService(_window, timerViewModel);
         trayIconService.Show();
@@ -66,6 +69,27 @@ public partial class App : Application
             trayIconService.Dispose();
             _window.Close();
         };
+    }
+
+    // Once a day, asks GitHub whether a newer release exists and shows the window's banner if so.
+    // Debug builds never check, so local development doesn't keep announcing the latest release.
+    private static async Task ShowUpdateBannerAsync(MainWindow window, TimerViewModel timerViewModel)
+    {
+#if !DEBUG
+        if (AppVersion.Current is not { } installedVersion) return;
+        var coordinator = new UpdateCoordinator(
+            new ApplicationDataUpdateInfoStore(),
+            new GitHubReleaseFetcher(),
+            installedVersion,
+            () => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+        window.UpdateDismissed += coordinator.Dismiss;
+        // Awaited on the UI thread, so the continuation can touch the window directly.
+        var release = await coordinator.RefreshAsync();
+        window.SetTimerRunning(timerViewModel.IsRunning);
+        window.SetUpdateRelease(release);
+#else
+        await Task.CompletedTask;
+#endif
     }
 
     // Re-runs the same keep-awake decision the IsRunning-change handler uses, so toggling the
