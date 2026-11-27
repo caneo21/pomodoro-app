@@ -39,6 +39,11 @@ try {
     if (-not $msix) {
         Exit-WithMessage "이 PC에 맞는 설치 파일(.msix)을 같은 폴더에 넣어주세요. (필요한 파일: PomodoroWindows-*-$arch.msix)" 1
     }
+    # Closing the window only hides Pomodoro to the tray, and Windows can't replace a running app
+    # (Add-AppxPackage fails with "package in use"), so ask the user to quit it first.
+    if (Get-Process -Name 'PomodoroWindows' -ErrorAction SilentlyContinue) {
+        Exit-WithMessage 'Pomodoro가 실행 중이에요. 작업 표시줄 오른쪽 트레이의 Pomodoro 아이콘을 우클릭해서 종료한 뒤 Install.cmd를 다시 실행해주세요.' 1
+    }
     if (-not (Test-Path $cerPath)) {
         Exit-WithMessage 'PomodoroWindows.cer 파일을 같은 폴더에 넣어주세요.' 1
     }
