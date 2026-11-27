@@ -15,6 +15,10 @@ public partial class App : Application
     private ApplicationDataSettingsStore? _settingsStore;
     private TimerViewModel? _timerViewModel;
     private KeepAwakeService? _keepAwakeService;
+#if !DEBUG
+    private Microsoft.UI.Dispatching.DispatcherQueueTimer? _updateCheckTimer;
+    private static readonly TimeSpan UpdateRecheckInterval = TimeSpan.FromHours(6);
+#endif
 
     public App()
     {
@@ -71,9 +75,11 @@ public partial class App : Application
         };
     }
 
-    // Once a day, asks GitHub whether a newer release exists and shows the window's banner if so.
-    // Debug builds never check, so local development doesn't keep announcing the latest release.
-    private static async Task ShowUpdateBannerAsync(MainWindow window, TimerViewModel timerViewModel)
+    // Asks GitHub whether a newer release exists and shows the window's banner if so. The app
+    // lives in the tray for days, so besides launch it re-asks every few hours; UpdateCoordinator
+    // still contacts GitHub at most once a day. Debug builds never check, so local development
+    // doesn't keep announcing the latest release.
+    private async Task ShowUpdateBannerAsync(MainWindow window, TimerViewModel timerViewModel)
     {
 #if !DEBUG
         if (AppVersion.Current is not { } installedVersion) return;
@@ -87,6 +93,11 @@ public partial class App : Application
         var release = await coordinator.RefreshAsync();
         window.SetTimerRunning(timerViewModel.IsRunning);
         window.SetUpdateRelease(release);
+
+        _updateCheckTimer = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().CreateTimer();
+        _updateCheckTimer.Interval = UpdateRecheckInterval;
+        _updateCheckTimer.Tick += async (_, _) => window.SetUpdateRelease(await coordinator.RefreshAsync());
+        _updateCheckTimer.Start();
 #else
         await Task.CompletedTask;
 #endif

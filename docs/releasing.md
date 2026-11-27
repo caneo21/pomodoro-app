@@ -55,8 +55,9 @@ git tag v1.2.0
 git push origin v1.2.0
 ```
 
-Watch the run under the repo's **Actions** tab. When it's green, the release is live and every
-installed phone and Windows app shows the update banner within a day of its next launch.
+Watch the run under the repo's **Actions** tab. When it's green, the release is live. Installed
+apps ask GitHub at most once a day: the phone app when it's opened, the Windows app at launch and
+every 6 hours while it sits in the tray. So everyone sees the banner within about a day.
 
 ## A bad release
 
