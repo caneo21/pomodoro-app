@@ -185,9 +185,11 @@ fun SettingsScreen(
         SettingsCard {
             SettingsSwitchRow("알림 사용", "notificationsEnabledLabel", "notificationsEnabledSwitch", notificationsEnabled, onNotificationsEnabledChange)
             Spacer(Modifier.height(16.dp))
-            SettingsSwitchRow("진동", "vibrationEnabledLabel", "vibrationEnabledSwitch", vibrationEnabled, onVibrationEnabledChange)
+            // Vibration and sound only ride on the session-end notification, so they have no effect
+            // while notifications are off: grey them out but keep their saved values.
+            SettingsSwitchRow("진동", "vibrationEnabledLabel", "vibrationEnabledSwitch", vibrationEnabled, onVibrationEnabledChange, enabled = notificationsEnabled)
             Spacer(Modifier.height(16.dp))
-            SettingsSwitchRow("알람음 사용 (끄면 알림음)", "useAlarmSoundLabel", "useAlarmSoundSwitch", useAlarmSound, onUseAlarmSoundChange)
+            SettingsSwitchRow("알람음 사용 (끄면 알림음)", "useAlarmSoundLabel", "useAlarmSoundSwitch", useAlarmSound, onUseAlarmSoundChange, enabled = notificationsEnabled)
         }
 
         Spacer(Modifier.height(16.dp))
@@ -252,7 +254,8 @@ private fun SettingsSwitchRow(
     labelTag: String,
     switchTag: String,
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
+    enabled: Boolean = true
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -261,12 +264,13 @@ private fun SettingsSwitchRow(
     ) {
         Text(
             label,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (enabled) 1f else 0.38f),
             modifier = Modifier.weight(1f).testTag(labelTag)
         )
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
+            enabled = enabled,
             modifier = Modifier.testTag(switchTag)
         )
     }

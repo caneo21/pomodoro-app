@@ -74,6 +74,9 @@ public sealed partial class SettingsPage : Page
         DailyGoalTargetSlider.Value = _viewModel.DailyGoalTarget;
         NotificationsEnabledToggle.IsOn = _viewModel.NotificationsEnabled;
         UseAlarmSoundToggle.IsOn = _viewModel.UseAlarmSound;
+        // The alarm sound only plays with the session-end notification, so it is greyed out
+        // (value kept) while notifications are off.
+        UseAlarmSoundToggle.IsEnabled = _viewModel.NotificationsEnabled;
 
         RenderThemeSwatches();
 
@@ -202,6 +205,7 @@ public sealed partial class SettingsPage : Page
     {
         if (_isLoading || _viewModel is null) return;
         _viewModel.NotificationsEnabled = NotificationsEnabledToggle.IsOn;
+        UseAlarmSoundToggle.IsEnabled = NotificationsEnabledToggle.IsOn;
         _viewModel.Save();
     }
 

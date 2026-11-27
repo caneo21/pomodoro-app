@@ -1,5 +1,8 @@
 package com.pomodoro.timer.ui.screens
 
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -189,6 +192,29 @@ class SettingsScreenTest {
         assertTrue(notificationsToggled == false)
         assertTrue(vibrationToggled == false)
         assertTrue(useAlarmSoundToggled == true)
+    }
+
+    @Test
+    fun vibrationAndAlarmSoundSwitches_areDisabled_whenNotificationsOff() {
+        composeRule.setContent {
+            PomodoroTheme {
+                SettingsScreen(
+                    focusMinutes = 25,
+                    breakMinutes = 5,
+                    notificationsEnabled = false,
+                    vibrationEnabled = true,
+                    useAlarmSound = true,
+                    onFocusMinutesChange = {},
+                    onBreakMinutesChange = {},
+                    onBack = {}
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("notificationsEnabledSwitch").performScrollTo().assertIsEnabled()
+        // Disabled but still showing the saved values.
+        composeRule.onNodeWithTag("vibrationEnabledSwitch").performScrollTo().assertIsNotEnabled().assertIsOn()
+        composeRule.onNodeWithTag("useAlarmSoundSwitch").performScrollTo().assertIsNotEnabled().assertIsOn()
     }
 
     @Test
