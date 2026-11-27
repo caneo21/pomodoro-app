@@ -5,13 +5,17 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.media.AudioAttributes
 import android.media.RingtoneManager
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.pomodoro.timer.MainActivity
+import com.pomodoro.timer.core.BackgroundSyncAction
+import com.pomodoro.timer.core.BackgroundSyncHandler
 import com.pomodoro.timer.core.ColorTheme
 import com.pomodoro.timer.core.DailyGoalProgress
 import com.pomodoro.timer.core.DailyGoalTracker
@@ -23,7 +27,10 @@ import com.pomodoro.timer.core.TimerPhase
 import com.pomodoro.timer.core.TimerState
 import com.pomodoro.timer.core.TimerTransition
 import com.pomodoro.timer.core.phaseEndAlarmAtMillis
+import com.pomodoro.timer.core.serviceLifecycleAfterAdoption
+import com.pomodoro.timer.core.ServiceLifecycle
 import com.pomodoro.timer.core.SyncCoordinator
+import com.pomodoro.timer.core.SyncLedger
 import com.pomodoro.timer.core.SyncPayload
 import com.pomodoro.timer.settings.TimerSettingsRepository
 import com.pomodoro.timer.settings.dataStore
@@ -49,6 +56,9 @@ class TimerService : Service() {
         const val ACTION_RESET = "com.pomodoro.timer.action.RESET"
         const val ACTION_UPDATE_DURATIONS = "com.pomodoro.timer.action.UPDATE_DURATIONS"
         const val ACTION_PHASE_END_ALARM = "com.pomodoro.timer.action.PHASE_END_ALARM"
+
+        /** Sent by [backgroundSyncHandler] after it adopted a running state from the watch. */
+        const val ACTION_SYNC_REMOTE = "com.pomodoro.timer.action.SYNC_REMOTE"
         const val EXTRA_FOCUS_MINUTES = "extra_focus_minutes"
         const val EXTRA_BREAK_MINUTES = "extra_break_minutes"
         const val EXTRA_LONG_BREAK_MINUTES = "extra_long_break_minutes"
@@ -97,18 +107,84 @@ class TimerService : Service() {
         private var vibrationEnabled: Boolean = true
         private var useAlarmSound: Boolean = false
         private var colorTheme: ColorTheme = ColorTheme.DEFAULT
+
+        // Static alongside `engine` for the same reason: the newest payload this process has adopted
+        // or published, shared by the service's coordinator and the background listener.
+        private val syncLedger = SyncLedger()
+
+        // Main thread only (onCreate/onDestroy and the background handler all run there).
+        private var serviceAlive = false
+
+        /**
+         * Writes [payload] into the process-wide engine and settings. No service instance needed;
+         * persisting the daily-goal count is left to the caller, which has a scope to do it in.
+         */
+        private fun adoptRemoteIntoState(payload: SyncPayload): TimerState {
+            focusMinutes = payload.focusMinutes
+            breakMinutes = payload.breakMinutes
+            longBreakMinutes = payload.longBreakMinutes
+            pomodorosUntilLongBreak = payload.pomodorosUntilLongBreak
+            autoStartBreak = payload.autoStartBreak
+            autoStartFocus = payload.autoStartFocus
+            dailyGoalEnabled = payload.dailyGoalEnabled
+            dailyGoalTarget = payload.dailyGoalTarget
+            notificationsEnabled = payload.notificationsEnabled
+            vibrationEnabled = payload.vibrationEnabled
+            useAlarmSound = payload.useAlarmSound
+            colorTheme = payload.colorTheme
+            if (payload.dailyGoalDate.isNotEmpty()) {
+                dailyGoalProgress = DailyGoalProgress(payload.dailyGoalDate, payload.dailyGoalCount)
+            }
+            _state.value = engine.adoptRemote(payload, System.currentTimeMillis())
+            return _state.value
+        }
+
+        /**
+         * For payloads that arrive while this service may not be running ([PhoneSyncListenerService]).
+         * Call on the main thread.
+         */
+        internal fun backgroundSyncHandler(context: Context): BackgroundSyncHandler {
+            val appContext = context.applicationContext
+            return BackgroundSyncHandler(
+                ledger = syncLedger,
+                isServiceAlive = { serviceAlive },
+                adopt = ::adoptRemoteIntoState,
+                startService = {
+                    runCatching {
+                        ContextCompat.startForegroundService(
+                            appContext,
+                            Intent(appContext, TimerService::class.java).setAction(ACTION_SYNC_REMOTE)
+                        )
+                    }.isSuccess
+                },
+                armPhaseEndAlarm = { triggerAt -> PhaseEndAlarm.schedule(appContext, triggerAt) },
+                clock = System::currentTimeMillis
+            )
+        }
+
+        /** Persists a daily-goal count that came in with [payload], as [applyRemoteState] does. */
+        internal suspend fun persistDailyGoal(context: Context, payload: SyncPayload) {
+            if (payload.dailyGoalDate.isEmpty()) return
+            TimerSettingsRepository(context.applicationContext.dataStore)
+                .setDailyGoalProgress(payload.dailyGoalDate, payload.dailyGoalCount)
+        }
     }
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var tickerJob: Job? = null
     private var inForeground = false
     private lateinit var syncCoordinator: SyncCoordinator
+    private var syncJob: Job? = null
+
+    // Start commands received but not yet handled (each waits for the cold-start seed first).
+    private var pendingCommands = 0
     private lateinit var settingsRepository: TimerSettingsRepository
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
+        serviceAlive = true
         createNotificationChannels()
         settingsRepository = TimerSettingsRepository(applicationContext.dataStore)
         serviceScope.launch { dailyGoalProgress = settingsRepository.dailyGoalProgress.first() }
@@ -116,32 +192,56 @@ class TimerService : Service() {
         syncCoordinator = SyncCoordinator(
             transport = transport,
             scope = serviceScope,
+            ledger = syncLedger,
             onRemoteStateIsNewer = ::applyRemoteState
         )
-        syncCoordinator.start()
+        syncJob = syncCoordinator.start()
     }
 
     private fun applyRemoteState(payload: SyncPayload) {
-        focusMinutes = payload.focusMinutes
-        breakMinutes = payload.breakMinutes
-        longBreakMinutes = payload.longBreakMinutes
-        pomodorosUntilLongBreak = payload.pomodorosUntilLongBreak
-        autoStartBreak = payload.autoStartBreak
-        autoStartFocus = payload.autoStartFocus
-        dailyGoalEnabled = payload.dailyGoalEnabled
-        dailyGoalTarget = payload.dailyGoalTarget
-        notificationsEnabled = payload.notificationsEnabled
-        vibrationEnabled = payload.vibrationEnabled
-        useAlarmSound = payload.useAlarmSound
-        colorTheme = payload.colorTheme
+        adoptRemoteIntoState(payload)
         if (payload.dailyGoalDate.isNotEmpty()) {
-            dailyGoalProgress = DailyGoalProgress(payload.dailyGoalDate, payload.dailyGoalCount)
             serviceScope.launch { settingsRepository.setDailyGoalProgress(payload.dailyGoalDate, payload.dailyGoalCount) }
         }
-        _state.value = engine.adoptRemote(payload, System.currentTimeMillis())
-        if (_state.value.isRunning) startTicker() else stopTicker()
+        onRemoteStateAdopted()
+    }
+
+    /** Brings the ticker, phase-end alarm, notification and the service itself in line with [_state]. */
+    private fun onRemoteStateAdopted() {
+        val state = _state.value
+        when (serviceLifecycleAfterAdoption(state.isRunning, pendingCommands)) {
+            ServiceLifecycle.RUN_IN_FOREGROUND -> {
+                startTicker()
+                syncPhaseEndAlarm(state)
+                if (inForeground) {
+                    updateOngoingNotification(state)
+                } else {
+                    inForeground = runCatching {
+                        startForeground(ONGOING_NOTIFICATION_ID, buildOngoingNotification(state))
+                    }.isSuccess
+                }
+            }
+            ServiceLifecycle.DEFER_TO_PENDING_COMMAND -> {
+                stopTicker()
+                syncPhaseEndAlarm(state)
+                updateOngoingNotification(state)
+            }
+            ServiceLifecycle.STOP -> stopTimerService()
+        }
+    }
+
+    /**
+     * Leaves the foreground, removing the ongoing notification, and stops. From here on the
+     * background listener handles incoming payloads, so this instance stops consuming them.
+     */
+    private fun stopTimerService() {
+        stopTicker()
         syncPhaseEndAlarm(_state.value)
-        updateOngoingNotification(_state.value)
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        inForeground = false
+        serviceAlive = false
+        syncJob?.cancel()
+        stopSelf()
     }
 
     private fun publishSyncState(state: TimerState, actionAtMillis: Long) {
@@ -172,26 +272,36 @@ class TimerService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // Every user command arrives via startForegroundService, which obliges us to enter the
-        // foreground within ~5s regardless of which action it was. The phase-end alarm uses plain
-        // startService while we are already in the foreground, so it only needs this if the service
-        // instance was recreated in the meantime (exact alarms permit a background foreground start;
-        // if that is refused the tick still runs, just without a foreground service).
-        if (intent?.action != ACTION_PHASE_END_ALARM) {
-            startForeground(ONGOING_NOTIFICATION_ID, buildOngoingNotification(_state.value))
-            inForeground = true
-        } else if (!inForeground) {
-            inForeground = runCatching {
+        // Every user command (and ACTION_SYNC_REMOTE) arrives via startForegroundService, which
+        // obliges us to enter the foreground within ~5s regardless of which action it was. The
+        // phase-end alarm uses plain startService while we are already in the foreground, so it only
+        // needs this if the service instance was recreated in the meantime (exact alarms permit a
+        // background foreground start; if that is refused the tick still runs, just without a
+        // foreground service).
+        when (foregroundEntryFor(intent?.action)) {
+            ForegroundEntry.ALWAYS -> {
                 startForeground(ONGOING_NOTIFICATION_ID, buildOngoingNotification(_state.value))
-            }.isSuccess
+                inForeground = true
+            }
+            ForegroundEntry.IF_NOT_ALREADY -> if (!inForeground) {
+                inForeground = runCatching {
+                    startForeground(ONGOING_NOTIFICATION_ID, buildOngoingNotification(_state.value))
+                }.isSuccess
+            }
         }
 
         // On a freshly-created service, the engine still holds only its hardcoded defaults until
         // the coordinator's cold-start seed resolves; acting on this action before that happens
         // would publish those defaults with a fresh timestamp and win a conflict it shouldn't. On
         // a warm service this has already resolved and returns immediately.
+        // Until it is handled, a remote stop arriving through the seed leaves the decision to it.
+        pendingCommands++
         serviceScope.launch {
-            syncCoordinator.awaitInitialSync()
+            try {
+                syncCoordinator.awaitInitialSync()
+            } finally {
+                pendingCommands--
+            }
             handleAction(intent)
         }
         return START_NOT_STICKY
@@ -225,12 +335,11 @@ class TimerService : Service() {
             ACTION_RESET -> {
                 _state.value = engine.reset(now)
                 publishSyncState(_state.value, now)
-                stopTicker()
-                syncPhaseEndAlarm(_state.value)
-                stopForeground(STOP_FOREGROUND_REMOVE)
-                inForeground = false
-                stopSelf()
+                stopTimerService()
             }
+            // The state was already adopted (by the background handler, or by this instance's
+            // seed); only the service's own side of it is left.
+            ACTION_SYNC_REMOTE -> onRemoteStateAdopted()
             ACTION_UPDATE_DURATIONS -> {
                 focusMinutes = intent.getIntExtra(EXTRA_FOCUS_MINUTES, TimerDefaults.DEFAULT_FOCUS_MINUTES)
                 breakMinutes = intent.getIntExtra(EXTRA_BREAK_MINUTES, TimerDefaults.DEFAULT_BREAK_MINUTES)
@@ -259,9 +368,7 @@ class TimerService : Service() {
                 _state.value = engine.currentState(now)
                 publishSyncState(_state.value, now)
                 if (!_state.value.isRunning) {
-                    stopForeground(STOP_FOREGROUND_REMOVE)
-                    inForeground = false
-                    stopSelf()
+                    stopTimerService()
                 } else {
                     updateOngoingNotification(_state.value)
                 }
@@ -411,6 +518,7 @@ class TimerService : Service() {
     }
 
     override fun onDestroy() {
+        serviceAlive = false
         stopTicker()
         PhaseEndAlarm.cancel(this)
         serviceScope.cancel()

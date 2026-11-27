@@ -14,6 +14,7 @@ import com.pomodoro.timer.core.SyncPayload
 import com.pomodoro.timer.core.SyncTransport
 import com.pomodoro.timer.core.TimerDefaults
 import com.pomodoro.timer.core.TimerPhase
+import com.pomodoro.timer.core.newestPayload
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -71,49 +72,50 @@ class PlayServicesSyncTransport(context: Context) : SyncTransport {
 
     /**
      * Reads whatever state is already published, since [observeRemoteState] only ever delivers
-     * *future* changes and would otherwise leave a freshly-started service stuck on defaults.
+     * *future* changes and would otherwise leave a freshly-started service stuck on defaults. Each
+     * device writes its own item at [SyncKeys.TIMER_STATE_PATH], so this returns the newest of them.
      */
     override suspend fun getCurrentRemoteState(): SyncPayload? {
         val items = dataClient.dataItems.await()
         try {
-            for (item in items) {
-                if (item.uri.path == SyncKeys.TIMER_STATE_PATH) {
-                    return decode(DataMapItem.fromDataItem(item).dataMap)
-                }
-            }
+            return newestPayload(
+                items.filter { it.uri.path == SyncKeys.TIMER_STATE_PATH }
+                    .map { decode(DataMapItem.fromDataItem(it).dataMap) }
+            )
         } finally {
             items.release()
         }
-        return null
     }
 
-    private fun decode(map: DataMap): SyncPayload = SyncPayload(
-        phase = enumValues<TimerPhase>()
-            .firstOrNull { it.name == map.getString(SyncKeys.KEY_PHASE, TimerPhase.FOCUS.name) }
-            ?: TimerPhase.FOCUS,
-        isRunning = map.getBoolean(SyncKeys.KEY_IS_RUNNING),
-        remainingMillis = map.getLong(SyncKeys.KEY_REMAINING_MILLIS),
-        totalMillis = map.getLong(SyncKeys.KEY_TOTAL_MILLIS),
-        focusMinutes = map.getInt(SyncKeys.KEY_FOCUS_MINUTES),
-        breakMinutes = map.getInt(SyncKeys.KEY_BREAK_MINUTES),
-        lastActionAtMillis = map.getLong(SyncKeys.KEY_LAST_ACTION_AT_MILLIS),
-        longBreakMinutes = map.getInt(SyncKeys.KEY_LONG_BREAK_MINUTES, TimerDefaults.DEFAULT_LONG_BREAK_MINUTES),
-        pomodorosUntilLongBreak = map.getInt(
-            SyncKeys.KEY_POMODOROS_UNTIL_LONG_BREAK,
-            TimerDefaults.DEFAULT_POMODOROS_UNTIL_LONG_BREAK
-        ),
-        completedPomodoros = map.getInt(SyncKeys.KEY_COMPLETED_POMODOROS),
-        autoStartBreak = map.getBoolean(SyncKeys.KEY_AUTO_START_BREAK, false),
-        autoStartFocus = map.getBoolean(SyncKeys.KEY_AUTO_START_FOCUS, false),
-        dailyGoalEnabled = map.getBoolean(SyncKeys.KEY_DAILY_GOAL_ENABLED, false),
-        dailyGoalTarget = map.getInt(SyncKeys.KEY_DAILY_GOAL_TARGET, TimerDefaults.DEFAULT_DAILY_GOAL_TARGET),
-        dailyGoalCount = map.getInt(SyncKeys.KEY_DAILY_GOAL_COUNT, 0),
-        dailyGoalDate = map.getString(SyncKeys.KEY_DAILY_GOAL_DATE, ""),
-        notificationsEnabled = map.getBoolean(SyncKeys.KEY_NOTIFICATIONS_ENABLED, true),
-        vibrationEnabled = map.getBoolean(SyncKeys.KEY_VIBRATION_ENABLED, true),
-        useAlarmSound = map.getBoolean(SyncKeys.KEY_USE_ALARM_SOUND, false),
-        colorTheme = enumValues<ColorTheme>()
-            .firstOrNull { it.name == map.getString(SyncKeys.KEY_COLOR_THEME, ColorTheme.DEFAULT.name) }
-            ?: ColorTheme.DEFAULT
-    )
+    internal companion object {
+        fun decode(map: DataMap): SyncPayload = SyncPayload(
+            phase = enumValues<TimerPhase>()
+                .firstOrNull { it.name == map.getString(SyncKeys.KEY_PHASE, TimerPhase.FOCUS.name) }
+                ?: TimerPhase.FOCUS,
+            isRunning = map.getBoolean(SyncKeys.KEY_IS_RUNNING),
+            remainingMillis = map.getLong(SyncKeys.KEY_REMAINING_MILLIS),
+            totalMillis = map.getLong(SyncKeys.KEY_TOTAL_MILLIS),
+            focusMinutes = map.getInt(SyncKeys.KEY_FOCUS_MINUTES),
+            breakMinutes = map.getInt(SyncKeys.KEY_BREAK_MINUTES),
+            lastActionAtMillis = map.getLong(SyncKeys.KEY_LAST_ACTION_AT_MILLIS),
+            longBreakMinutes = map.getInt(SyncKeys.KEY_LONG_BREAK_MINUTES, TimerDefaults.DEFAULT_LONG_BREAK_MINUTES),
+            pomodorosUntilLongBreak = map.getInt(
+                SyncKeys.KEY_POMODOROS_UNTIL_LONG_BREAK,
+                TimerDefaults.DEFAULT_POMODOROS_UNTIL_LONG_BREAK
+            ),
+            completedPomodoros = map.getInt(SyncKeys.KEY_COMPLETED_POMODOROS),
+            autoStartBreak = map.getBoolean(SyncKeys.KEY_AUTO_START_BREAK, false),
+            autoStartFocus = map.getBoolean(SyncKeys.KEY_AUTO_START_FOCUS, false),
+            dailyGoalEnabled = map.getBoolean(SyncKeys.KEY_DAILY_GOAL_ENABLED, false),
+            dailyGoalTarget = map.getInt(SyncKeys.KEY_DAILY_GOAL_TARGET, TimerDefaults.DEFAULT_DAILY_GOAL_TARGET),
+            dailyGoalCount = map.getInt(SyncKeys.KEY_DAILY_GOAL_COUNT, 0),
+            dailyGoalDate = map.getString(SyncKeys.KEY_DAILY_GOAL_DATE, ""),
+            notificationsEnabled = map.getBoolean(SyncKeys.KEY_NOTIFICATIONS_ENABLED, true),
+            vibrationEnabled = map.getBoolean(SyncKeys.KEY_VIBRATION_ENABLED, true),
+            useAlarmSound = map.getBoolean(SyncKeys.KEY_USE_ALARM_SOUND, false),
+            colorTheme = enumValues<ColorTheme>()
+                .firstOrNull { it.name == map.getString(SyncKeys.KEY_COLOR_THEME, ColorTheme.DEFAULT.name) }
+                ?: ColorTheme.DEFAULT
+        )
+    }
 }

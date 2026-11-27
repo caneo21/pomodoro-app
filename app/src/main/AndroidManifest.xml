@@ -42,5 +42,18 @@
             android:name=".timer.PhaseEndAlarmReceiver"
             android:exported="false" />
 
+        <!-- Woken by Google Play services for the watch's timer-state writes, even with the app closed. -->
+        <service
+            android:name=".sync.PhoneSyncListenerService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
+                <data
+                    android:scheme="wear"
+                    android:host="*"
+                    android:path="/pomodoro/timer_state" />
+            </intent-filter>
+        </service>
+
     </application>
 </manifest>
