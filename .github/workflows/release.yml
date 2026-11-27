@@ -1,0 +1,206 @@
+name: Release
+
+# Push a tag like v1.2.0 to build, sign, and publish the phone, watch, and Windows apps as a
+# GitHub Release. See docs/releasing.md for the one-time secret setup.
+on:
+  push:
+    tags: ["v*"]
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate tag
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.parse.outputs.version }}
+    steps:
+      - id: parse
+        shell: bash
+        run: |
+          if [[ ! "$GITHUB_REF_NAME" =~ ^v([0-9]+)\.([0-9]{1,2})\.([0-9]{1,2})$ ]]; then
+            echo "::error title=Bad tag::Release tags must look like v1.2.3 (minor and patch 0-99), got '$GITHUB_REF_NAME'"
+            exit 1
+          fi
+          echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+  android:
+    name: Android (phone, watch)
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      VERSION: ${{ needs.validate.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Decode release keystore
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "::error title=Missing secret::ANDROID_KEYSTORE_BASE64 is not set (see docs/releasing.md)"
+            exit 1
+          fi
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+
+      # gradle.properties pins org.gradle.java.home to a local Windows JDK path; the -D property
+      # points Gradle at the runner's JDK instead (same as ci.yml).
+      - name: Test and build signed release APKs
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: >
+          ./gradlew --console=plain
+          -Dorg.gradle.java.home="$JAVA_HOME"
+          -PreleaseVersion="$VERSION"
+          :core:test
+          :app:testDebugUnitTest
+          :wear:testDebugUnitTest
+          :app:assembleRelease
+          :wear:assembleRelease
+
+      - name: Collect APKs
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp app/build/outputs/apk/release/app-release.apk "dist/pomodoro-phone-$VERSION.apk"
+          cp wear/build/outputs/apk/release/wear-release.apk "dist/pomodoro-watch-$VERSION.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: dist/
+          if-no-files-found: error
+
+      - name: Remove keystore
+        if: always()
+        shell: bash
+        run: rm -f "$RUNNER_TEMP/release.jks"
+
+  windows:
+    name: Windows (x64, arm64)
+    needs: validate
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      VERSION: ${{ needs.validate.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Core tests
+        run: dotnet test windows/PomodoroWindows.Core.Tests/PomodoroWindows.Core.Tests.csproj
+
+      - name: Stamp package version
+        shell: pwsh
+        run: |
+          $path = 'windows/PomodoroWindows/Package.appxmanifest'
+          $text = Get-Content -Raw -Path $path
+          $stamped = $text -replace '(<Identity\b[^>]*\bVersion=")[^"]*(")', "`${1}$env:VERSION.0`${2}"
+          if ($stamped -eq $text) { throw "Could not find the Identity Version in $path" }
+          Set-Content -Path $path -Value $stamped -NoNewline -Encoding utf8
+
+      - name: Decode signing certificate
+        shell: pwsh
+        env:
+          WINDOWS_CERT_PFX_BASE64: ${{ secrets.WINDOWS_CERT_PFX_BASE64 }}
+        run: |
+          if (-not $env:WINDOWS_CERT_PFX_BASE64) {
+            Write-Output "::error title=Missing secret::WINDOWS_CERT_PFX_BASE64 is not set (see docs/releasing.md)"
+            exit 1
+          }
+          $pfx = Join-Path $env:RUNNER_TEMP 'signing.pfx'
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_CERT_PFX_BASE64))
+          "PFX_PATH=$pfx" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      # dotnet build (not VS MSBuild) produces the signed MSIX; the Appx properties make it package
+      # for sideloading and sign with the PFX. Each architecture also gets the Windows App Runtime
+      # package the app depends on, which Install.ps1 installs alongside it.
+      - name: Build signed MSIX packages
+        shell: pwsh
+        env:
+          WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+        run: |
+          $dist = New-Item -ItemType Directory -Force -Path dist
+          foreach ($arch in 'x64', 'arm64') {
+            $out = Join-Path $env:RUNNER_TEMP "msix-$arch\"
+            dotnet build windows/PomodoroWindows/PomodoroWindows.csproj -nologo -v:minimal `
+              -c Release -p:Platform=$arch -p:RuntimeIdentifier=win-$arch `
+              -p:GenerateAppxPackageOnBuild=true -p:UapAppxPackageBuildMode=SideloadOnly -p:AppxBundle=Never `
+              -p:AppxPackageSigningEnabled=true "-p:PackageCertificateKeyFile=$env:PFX_PATH" `
+              "-p:PackageCertificatePassword=$env:WINDOWS_CERT_PASSWORD" "-p:AppxPackageDir=$out"
+            if ($LASTEXITCODE -ne 0) { throw "MSIX build failed for $arch" }
+
+            $msix = Get-ChildItem -Path $out -Recurse -Filter "PomodoroWindows_*_$arch.msix" | Select-Object -First 1
+            if (-not $msix) { throw "No PomodoroWindows MSIX produced for $arch" }
+            Copy-Item $msix.FullName (Join-Path $dist "PomodoroWindows-$env:VERSION-$arch.msix")
+
+            $runtime = Get-ChildItem -Path $out -Recurse -Filter 'Microsoft.WindowsAppRuntime.*.msix' |
+              Where-Object { $_.Directory.Name -eq $arch } | Select-Object -First 1
+            if (-not $runtime) { throw "No Windows App Runtime dependency produced for $arch" }
+            Copy-Item $runtime.FullName (Join-Path $dist "WindowsAppRuntime-$arch.msix")
+          }
+
+          # Public half of the signing certificate: friends trust it once via Install.ps1.
+          $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2 `
+            $env:PFX_PATH, $env:WINDOWS_CERT_PASSWORD
+          [IO.File]::WriteAllBytes((Join-Path $dist 'PomodoroWindows.cer'), $cert.Export('Cert'))
+
+          Copy-Item windows/installer/Install.ps1, windows/installer/Install.cmd $dist
+          Get-ChildItem $dist | Format-Table Name, Length
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: dist/
+          if-no-files-found: error
+
+      - name: Remove signing certificate
+        if: always()
+        shell: pwsh
+        run: Remove-Item -Force -ErrorAction SilentlyContinue (Join-Path $env:RUNNER_TEMP 'signing.pfx')
+
+  publish:
+    name: Publish GitHub Release
+    needs: [validate, android, windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Create release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls -l dist
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file .github/release-notes-header.md \
+            --generate-notes
