@@ -231,6 +231,18 @@ class TimerSettingsRepositoryTest {
     }
 
     @Test
+    fun `recordDailyGoalCompletion can record several completions in one write`() = runTest {
+        val repository = TimerSettingsRepository(newDataStore())
+        repository.setDailyGoalProgress("2026-08-19", 3)
+
+        val result = repository.recordDailyGoalCompletion("2026-08-19", completions = 2)
+
+        assertEquals(DailyGoalProgress("2026-08-19", 3), result.previous)
+        assertEquals(DailyGoalProgress("2026-08-19", 5), result.updated)
+        assertEquals(DailyGoalProgress("2026-08-19", 5), repository.dailyGoalProgress.first())
+    }
+
+    @Test
     fun `setDailyGoalProgress overwrites both keys directly`() = runTest {
         val repository = TimerSettingsRepository(newDataStore())
         repository.recordDailyGoalCompletion("2026-08-19")

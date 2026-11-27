@@ -284,4 +284,35 @@ public class TimerEngineTests
         Assert.Equal(TimerPhase.ShortBreak, afterBoundary.Phase);
         Assert.True(afterBoundary.IsRunning);
     }
+
+    [Fact]
+    public void UpdateDurations_while_paused_mid_phase_keeps_the_paused_remaining_time()
+    {
+        var engine = new TimerEngine(FocusMillis, BreakMillis);
+        engine.Start(now: 0L);
+        engine.Pause(now: 10 * 60_000L);
+
+        engine.UpdateDurations(focusMillis: 10 * 60_000L, shortBreakMillis: 2 * 60_000L);
+
+        var state = engine.CurrentState(now: 20 * 60_000L);
+        Assert.False(state.IsRunning);
+        Assert.Equal(FocusMillis - 10 * 60_000L, state.RemainingMillis);
+        Assert.Equal(FocusMillis, state.TotalMillis);
+    }
+
+    [Fact]
+    public void TotalFocusCompletions_counts_every_focus_phase_crossed_in_a_single_tick_and_survives_long_breaks()
+    {
+        var engine = new TimerEngine(
+            FocusMillis, BreakMillis, longBreakMillis: 900_000L, pomodorosUntilLongBreak: 1,
+            autoStartBreak: true, autoStartFocus: true);
+        engine.Start(now: 0L);
+
+        // focus -> long break -> focus -> long break: two focus phases ended, cycle count reset.
+        var state = engine.Tick(now: 2 * FocusMillis + 900_000L + 1_000L);
+
+        Assert.Equal(TimerPhase.LongBreak, state.Phase);
+        Assert.Equal(2L, state.TotalFocusCompletions);
+        Assert.Equal(2L, engine.Reset(now: 0L).TotalFocusCompletions);
+    }
 }

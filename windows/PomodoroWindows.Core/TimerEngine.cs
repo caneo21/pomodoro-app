@@ -20,6 +20,7 @@ public sealed class TimerEngine
     private long _endTimestamp;
     private long _remainingWhenIdle;
     private int _completedPomodoros;
+    private long _totalFocusCompletions;
 
     // Duration the in-flight phase was entered with. Kept separate from _focusMillis/_shortBreakMillis/
     // _longBreakMillis so a mid-session duration change can't make RemainingMillis exceed TotalMillis;
@@ -58,6 +59,7 @@ public sealed class TimerEngine
         {
             case TimerPhase.Focus:
                 _completedPomodoros += 1;
+                _totalFocusCompletions += 1;
                 return _completedPomodoros >= _pomodorosUntilLongBreak ? TimerPhase.LongBreak : TimerPhase.ShortBreak;
             case TimerPhase.ShortBreak:
                 return TimerPhase.Focus;
@@ -94,7 +96,8 @@ public sealed class TimerEngine
     public TimerState CurrentState(long now)
     {
         var remaining = _isRunning ? Math.Max(_endTimestamp - now, 0) : _remainingWhenIdle;
-        return new TimerState(_phase, _isRunning, remaining, _currentPhaseDurationMillis, _completedPomodoros);
+        return new TimerState(
+            _phase, _isRunning, remaining, _currentPhaseDurationMillis, _completedPomodoros, _totalFocusCompletions);
     }
 
     public TimerState Start(long now)
@@ -153,7 +156,10 @@ public sealed class TimerEngine
         _pomodorosUntilLongBreak = Math.Max(pomodorosUntilLongBreak ?? _pomodorosUntilLongBreak, 1);
         _autoStartBreak = autoStartBreak ?? _autoStartBreak;
         _autoStartFocus = autoStartFocus ?? _autoStartFocus;
-        if (!_isRunning)
+        // Only an idle phase that hasn't been started yet picks up the new duration. A phase paused
+        // part-way keeps its remaining time, same as a running one: the change applies from the next
+        // phase on.
+        if (!_isRunning && _remainingWhenIdle == _currentPhaseDurationMillis)
         {
             _remainingWhenIdle = DurationFor(_phase);
             _currentPhaseDurationMillis = DurationFor(_phase);

@@ -154,4 +154,49 @@ public class TimerViewModelTests
 
         Assert.Equal(10 * 60_000L, vm.RemainingMillis);
     }
+
+    [Fact]
+    public void Ending_a_long_break_does_not_credit_a_daily_goal_completion()
+    {
+        var vm = CreateViewModel(initialSettings: new TimerSettings(
+            FocusMinutes: 25, BreakMinutes: 5, LongBreakMinutes: 15, PomodorosUntilLongBreak: 1,
+            AutoStartBreak: true, AutoStartFocus: true, DailyGoalEnabled: true));
+        var t0 = DateTimeOffset.FromUnixTimeMilliseconds(0);
+        vm.StartPauseCommand.Execute(t0);
+
+        vm.Tick(t0.AddMilliseconds(25 * 60_000L + 1_000L)); // focus -> long break
+        Assert.Equal(1, vm.DailyGoalCount);
+
+        vm.Tick(t0.AddMilliseconds(40 * 60_000L + 2_000L)); // long break -> focus (cycle count 1 -> 0)
+        Assert.Equal(TimerPhase.Focus, vm.Phase);
+        Assert.Equal(1, vm.DailyGoalCount);
+    }
+
+    [Fact]
+    public void A_tick_that_ends_two_focus_sessions_credits_both()
+    {
+        var vm = CreateViewModel(initialSettings: new TimerSettings(
+            FocusMinutes: 25, BreakMinutes: 5, PomodorosUntilLongBreak: 100,
+            AutoStartBreak: true, AutoStartFocus: true, DailyGoalEnabled: true));
+        var t0 = DateTimeOffset.FromUnixTimeMilliseconds(0);
+        vm.StartPauseCommand.Execute(t0);
+
+        vm.Tick(t0.AddMilliseconds(55 * 60_000L + 1_000L)); // focus, break, focus -> break
+
+        Assert.Equal(2, vm.DailyGoalCount);
+    }
+
+    [Fact]
+    public void ApplySettings_while_paused_keeps_the_paused_remaining_time()
+    {
+        var vm = CreateViewModel(initialSettings: new TimerSettings(FocusMinutes: 25, BreakMinutes: 5));
+        var t0 = DateTimeOffset.FromUnixTimeMilliseconds(0);
+        vm.StartPauseCommand.Execute(t0);
+        vm.StartPauseCommand.Execute(t0.AddMilliseconds(10 * 60_000L));
+
+        vm.ApplySettings(new TimerSettings(FocusMinutes: 25, BreakMinutes: 5, ColorTheme: ColorTheme.Ocean));
+
+        Assert.False(vm.IsRunning);
+        Assert.Equal(15 * 60_000L, vm.RemainingMillis);
+    }
 }

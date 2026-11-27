@@ -58,31 +58,30 @@ public sealed partial class TimerViewModel : ObservableObject
 
     public void Tick(DateTimeOffset now)
     {
-        var previousPhase = Phase;
-        var previousCompleted = CompletedPomodoros;
-
-        var next = _engine.Tick(now.ToUnixTimeMilliseconds());
+        var nowMillis = now.ToUnixTimeMilliseconds();
+        var before = _engine.CurrentState(nowMillis);
+        var next = _engine.Tick(nowMillis);
         ApplyState(next);
 
-        if (next.Phase != previousPhase && _settings.NotificationsEnabled)
+        // TimerTransition rather than a phase comparison: a tick after a sleep/hibernate gap can cross
+        // several boundaries and land back in the phase it started in.
+        var transition = TimerTransition.Between(before, next);
+        if (transition.CrossedBoundary && _settings.NotificationsEnabled)
         {
             _notificationService.NotifySessionEnd(next.Phase);
         }
 
-        // Compare CompletedPomodoros rather than the phase, so a tick that silently crosses more than
-        // one boundary in a single call (e.g. after a sleep/hibernate gap) still credits the completed
-        // focus session instead of losing it because the phase happened to land back where it started.
-        if (next.CompletedPomodoros != previousCompleted)
+        if (transition.FocusSessionsCompleted > 0)
         {
-            RecordDailyGoalCompletion();
+            RecordDailyGoalCompletions(transition.FocusSessionsCompleted);
         }
     }
 
-    private void RecordDailyGoalCompletion()
+    private void RecordDailyGoalCompletions(int completions)
     {
         var today = DateTimeOffset.Now.ToString("yyyy-MM-dd");
         var previous = DailyGoalTracker.ForToday(_dailyGoalProgress, today);
-        var updated = DailyGoalTracker.RecordCompletion(_dailyGoalProgress, today);
+        var updated = DailyGoalTracker.RecordCompletions(_dailyGoalProgress, today, completions);
         _dailyGoalProgress = updated;
         DailyGoalCount = updated.Count;
         _settings = _settings with { DailyGoalDate = updated.Date, DailyGoalCount = updated.Count };

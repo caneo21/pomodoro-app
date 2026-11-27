@@ -135,7 +135,8 @@ class TimerSettingsRepository(private val dataStore: DataStore<Preferences>) {
         )
     }
 
-    suspend fun recordDailyGoalCompletion(today: String): DailyGoalCompletionResult {
+    /** Records [completions] finished focus sessions for [today] in a single DataStore write. */
+    suspend fun recordDailyGoalCompletion(today: String, completions: Int = 1): DailyGoalCompletionResult {
         var previous = DailyGoalProgress(today, 0)
         var updated = previous
         dataStore.edit { prefs ->
@@ -144,7 +145,7 @@ class TimerSettingsRepository(private val dataStore: DataStore<Preferences>) {
                 count = prefs[DAILY_GOAL_COUNT_KEY] ?: 0
             )
             previous = DailyGoalTracker.forToday(stored, today)
-            updated = DailyGoalTracker.recordCompletion(stored, today)
+            updated = DailyGoalTracker.recordCompletions(stored, today, completions)
             prefs[DAILY_GOAL_DATE_KEY] = updated.date
             prefs[DAILY_GOAL_COUNT_KEY] = updated.count
         }

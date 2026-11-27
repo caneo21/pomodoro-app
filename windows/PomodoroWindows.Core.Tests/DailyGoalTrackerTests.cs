@@ -75,4 +75,12 @@ public class DailyGoalTrackerTests
     {
         Assert.False(DailyGoalTracker.JustReachedGoal(previousCount: 8, count: 9, target: 8));
     }
+
+    [Fact]
+    public void RecordCompletions_adds_several_completions_at_once()
+    {
+        var result = DailyGoalTracker.RecordCompletions(new DailyGoalProgress("2026-08-19", 3), "2026-08-19", 2);
+
+        Assert.Equal(new DailyGoalProgress("2026-08-19", 5), result);
+    }
 }

@@ -528,4 +528,64 @@ class TimerEngineTest {
         assertEquals(TimerPhase.SHORT_BREAK, afterBoundary.phase)
         assertTrue(afterBoundary.isRunning) // now auto-continues, since autoStartBreak was flipped to true
     }
+
+    @Test
+    fun `updateDurations while paused mid-phase keeps the paused remaining time`() {
+        val engine = TimerEngine(focusMillis, breakMillis)
+        engine.start(now = 0L)
+        engine.pause(now = 10 * 60_000L)
+
+        engine.updateDurations(focusMillis = 10 * 60_000L, shortBreakMillis = 2 * 60_000L)
+
+        val state = engine.currentState(now = 20 * 60_000L)
+        assertFalse(state.isRunning)
+        assertEquals(focusMillis - 10 * 60_000L, state.remainingMillis)
+        assertEquals(focusMillis, state.totalMillis)
+
+        // The new focus duration still applies from the next focus phase on.
+        engine.start(now = 20 * 60_000L)
+        assertEquals(TimerPhase.SHORT_BREAK, engine.tick(now = 35 * 60_000L).phase)
+    }
+
+    @Test
+    fun `updateDurations with unchanged values while paused is a no-op`() {
+        val engine = TimerEngine(focusMillis, breakMillis)
+        engine.start(now = 0L)
+        val paused = engine.pause(now = 90_000L)
+
+        engine.updateDurations(focusMillis, breakMillis)
+
+        assertEquals(paused, engine.currentState(now = 90_000L))
+    }
+
+    @Test
+    fun `totalFocusCompletions counts every focus phase crossed in a single tick`() {
+        val engine = TimerEngine(
+            focusMillis, breakMillis, pomodorosUntilLongBreak = 100,
+            autoStartBreak = true, autoStartFocus = true
+        )
+        engine.start(now = 0L)
+
+        // focus(25) -> break(5) -> focus(25) -> break: two focus phases ended.
+        val state = engine.tick(now = 55 * 60_000L + 1_000L)
+
+        assertEquals(TimerPhase.SHORT_BREAK, state.phase)
+        assertEquals(2L, state.totalFocusCompletions)
+    }
+
+    @Test
+    fun `totalFocusCompletions survives reset and leaving a long break`() {
+        val engine = TimerEngine(
+            focusMillis, breakMillis, longBreakMillis = 900_000L, pomodorosUntilLongBreak = 1,
+            autoStartBreak = true, autoStartFocus = true
+        )
+        engine.start(now = 0L)
+        // focus -> long break -> focus: completedPomodoros resets to 0, the lifetime count does not.
+        val afterLongBreak = engine.tick(now = focusMillis + 900_000L + 1_000L)
+        assertEquals(TimerPhase.FOCUS, afterLongBreak.phase)
+        assertEquals(0, afterLongBreak.completedPomodoros)
+        assertEquals(1L, afterLongBreak.totalFocusCompletions)
+
+        assertEquals(1L, engine.reset(now = 0L).totalFocusCompletions)
+    }
 }
