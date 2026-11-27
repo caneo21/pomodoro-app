@@ -58,6 +58,15 @@ class DailyGoalTrackerTest {
     }
 
     @Test
+    fun `recordCompletions adds several completions at once`() {
+        val current = DailyGoalProgress(date = "2026-08-19", count = 3)
+
+        val result = DailyGoalTracker.recordCompletions(current, today = "2026-08-19", completions = 2)
+
+        assertEquals(DailyGoalProgress(date = "2026-08-19", count = 5), result)
+    }
+
+    @Test
     fun `justReachedGoal is true only on the exact crossing`() {
         assertTrue(DailyGoalTracker.justReachedGoal(previousCount = 7, count = 8, target = 8))
     }

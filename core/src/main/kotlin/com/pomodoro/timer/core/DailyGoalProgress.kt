@@ -8,9 +8,13 @@ object DailyGoalTracker {
         if (stored != null && stored.date == today) stored else DailyGoalProgress(today, 0)
 
     /** [current] with one more completion recorded, rolling over to [today] first if needed. */
-    fun recordCompletion(current: DailyGoalProgress?, today: String): DailyGoalProgress {
+    fun recordCompletion(current: DailyGoalProgress?, today: String): DailyGoalProgress =
+        recordCompletions(current, today, completions = 1)
+
+    /** [current] with [completions] more completions recorded, rolling over to [today] first if needed. */
+    fun recordCompletions(current: DailyGoalProgress?, today: String, completions: Int): DailyGoalProgress {
         val base = forToday(current, today)
-        return base.copy(count = base.count + 1)
+        return base.copy(count = base.count + completions)
     }
 
     /** True the instant [count] first reaches [target] (i.e. [previousCount] was still under it). */

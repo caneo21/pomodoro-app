@@ -13,6 +13,7 @@ class TimerEngine(
     private var endTimestamp: Long = 0L
     private var remainingWhenIdle: Long = focusMillis
     private var completedPomodoros: Int = 0
+    private var totalFocusCompletions: Long = 0L
 
     // Duration the in-flight phase was entered with. Kept separate from focusMillis/shortBreakMillis/
     // longBreakMillis so a mid-session duration change cannot make remainingMillis exceed totalMillis;
@@ -33,6 +34,7 @@ class TimerEngine(
     private fun nextPhase(): TimerPhase = when (phase) {
         TimerPhase.FOCUS -> {
             completedPomodoros += 1
+            totalFocusCompletions += 1
             if (completedPomodoros >= pomodorosUntilLongBreak) TimerPhase.LONG_BREAK else TimerPhase.SHORT_BREAK
         }
         TimerPhase.SHORT_BREAK -> TimerPhase.FOCUS
@@ -73,7 +75,8 @@ class TimerEngine(
             isRunning = isRunning,
             remainingMillis = remaining,
             totalMillis = currentPhaseDurationMillis,
-            completedPomodoros = completedPomodoros
+            completedPomodoros = completedPomodoros,
+            totalFocusCompletions = totalFocusCompletions
         )
     }
 
@@ -125,7 +128,10 @@ class TimerEngine(
         this.pomodorosUntilLongBreak = pomodorosUntilLongBreak.coerceAtLeast(1)
         this.autoStartBreak = autoStartBreak
         this.autoStartFocus = autoStartFocus
-        if (!isRunning) {
+        // Only an idle phase that hasn't been started yet picks up the new duration. A phase paused
+        // part-way keeps its remaining time, same as a running one: the change applies from the next
+        // phase on. (Settings are re-sent on every app launch, so resetting here wiped paused sessions.)
+        if (!isRunning && remainingWhenIdle == currentPhaseDurationMillis) {
             remainingWhenIdle = durationFor(phase)
             currentPhaseDurationMillis = durationFor(phase)
         }

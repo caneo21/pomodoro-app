@@ -22,8 +22,9 @@ import com.pomodoro.timer.core.SyncCoordinator
 import com.pomodoro.timer.core.SyncPayload
 import com.pomodoro.timer.core.TimerDefaults
 import com.pomodoro.timer.core.TimerEngine
-import com.pomodoro.timer.core.TimerPhase
 import com.pomodoro.timer.core.TimerState
+import com.pomodoro.timer.core.TimerTransition
+import com.pomodoro.timer.core.phaseEndAlarmAtMillis
 import com.pomodoro.timer.wear.MainActivity
 import com.pomodoro.timer.wear.sync.WearPlayServicesSyncTransport
 import java.time.LocalDate
@@ -44,6 +45,7 @@ class WearTimerService : Service() {
         const val ACTION_START = "com.pomodoro.timer.wear.action.START"
         const val ACTION_PAUSE = "com.pomodoro.timer.wear.action.PAUSE"
         const val ACTION_RESET = "com.pomodoro.timer.wear.action.RESET"
+        const val ACTION_PHASE_END_ALARM = "com.pomodoro.timer.wear.action.PHASE_END_ALARM"
 
         const val ONGOING_NOTIFICATION_ID = 1
         private const val SESSION_END_NOTIFICATION_ID = 2
@@ -108,6 +110,7 @@ class WearTimerService : Service() {
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var tickerJob: Job? = null
+    private var inForeground = false
     private lateinit var syncCoordinator: SyncCoordinator
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -140,11 +143,22 @@ class WearTimerService : Service() {
         _colorTheme.value = payload.colorTheme
         _state.value = engine.adoptRemote(payload, System.currentTimeMillis())
         if (_state.value.isRunning) startTicker() else stopTicker()
+        syncPhaseEndAlarm(_state.value)
         updateOngoingNotification(_state.value)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startForeground(ONGOING_NOTIFICATION_ID, buildOngoingNotification(_state.value))
+        // User commands arrive via startForegroundService and must enter the foreground. The
+        // phase-end alarm uses plain startService while we are already in the foreground, so it only
+        // needs this if the service instance was recreated in the meantime.
+        if (intent?.action != ACTION_PHASE_END_ALARM) {
+            startForeground(ONGOING_NOTIFICATION_ID, buildOngoingNotification(_state.value))
+            inForeground = true
+        } else if (!inForeground) {
+            inForeground = runCatching {
+                startForeground(ONGOING_NOTIFICATION_ID, buildOngoingNotification(_state.value))
+            }.isSuccess
+        }
 
         // On a freshly-created service, the engine still holds only its hardcoded defaults until
         // the coordinator's cold-start seed resolves; acting on this action before that happens
@@ -164,19 +178,31 @@ class WearTimerService : Service() {
                 _state.value = engine.start(now)
                 updateOngoingNotification(_state.value)
                 startTicker()
+                syncPhaseEndAlarm(_state.value)
                 onLocalStateChanged(_state.value, now)
             }
             ACTION_PAUSE -> {
                 _state.value = engine.pause(now)
                 stopTicker()
+                syncPhaseEndAlarm(_state.value)
                 updateOngoingNotification(_state.value)
                 onLocalStateChanged(_state.value, now)
+            }
+            ACTION_PHASE_END_ALARM -> {
+                try {
+                    processTick()
+                    if (_state.value.isRunning) startTicker()
+                } finally {
+                    WearPhaseEndAlarmReceiver.releaseWakeLock()
+                }
             }
             ACTION_RESET -> {
                 _state.value = engine.reset(now)
                 onLocalStateChanged(_state.value, now)
                 stopTicker()
+                syncPhaseEndAlarm(_state.value)
                 stopForeground(STOP_FOREGROUND_REMOVE)
+                inForeground = false
                 stopSelf()
             }
         }
@@ -245,31 +271,49 @@ class WearTimerService : Service() {
         tickerJob = serviceScope.launch {
             while (true) {
                 delay(TICK_INTERVAL_MILLIS)
-                val previousPhase = _state.value.phase
-                val newState = engine.tick(System.currentTimeMillis())
-                _state.value = newState
-                if (newState.phase != previousPhase) {
-                    onSessionEnded(newState)
-                    if (previousPhase == TimerPhase.FOCUS) {
-                        val today = LocalDate.now().toString()
-                        val previous = DailyGoalTracker.forToday(dailyGoalProgress, today)
-                        val updated = DailyGoalTracker.recordCompletion(dailyGoalProgress, today)
-                        dailyGoalProgress = updated
-                        if (_dailyGoalEnabled.value &&
-                            DailyGoalTracker.justReachedGoal(previous.count, updated.count, _dailyGoalTarget.value)
-                        ) {
-                            showDailyGoalReachedNotification(_dailyGoalTarget.value)
-                        }
-                    }
-                    onLocalStateChanged(newState, System.currentTimeMillis())
-                }
-                updateOngoingNotification(newState)
-                if (!newState.isRunning) {
+                processTick()
+                if (!_state.value.isRunning) {
                     tickerJob = null
                     return@launch
                 }
             }
         }
+    }
+
+    /**
+     * Advances the engine to now and reacts to any phase boundaries crossed since the last tick. Runs
+     * from both the 1-second ticker and the phase-end alarm (both on the main thread), and compares
+     * against [_state] so whichever gets there first handles a boundary exactly once.
+     */
+    private fun processTick() {
+        val previous = _state.value
+        val newState = engine.tick(System.currentTimeMillis())
+        _state.value = newState
+        val transition = TimerTransition.between(previous, newState)
+        if (transition.crossedBoundary) {
+            onSessionEnded(newState)
+            syncPhaseEndAlarm(newState)
+            if (transition.focusSessionsCompleted > 0) {
+                val today = LocalDate.now().toString()
+                val before = DailyGoalTracker.forToday(dailyGoalProgress, today)
+                val updated = DailyGoalTracker.recordCompletions(
+                    dailyGoalProgress, today, transition.focusSessionsCompleted
+                )
+                dailyGoalProgress = updated
+                if (_dailyGoalEnabled.value &&
+                    DailyGoalTracker.justReachedGoal(before.count, updated.count, _dailyGoalTarget.value)
+                ) {
+                    showDailyGoalReachedNotification(_dailyGoalTarget.value)
+                }
+            }
+            onLocalStateChanged(newState, System.currentTimeMillis())
+        }
+        updateOngoingNotification(newState)
+    }
+
+    private fun syncPhaseEndAlarm(state: TimerState) {
+        val triggerAt = phaseEndAlarmAtMillis(state, System.currentTimeMillis())
+        if (triggerAt != null) WearPhaseEndAlarm.schedule(this, triggerAt) else WearPhaseEndAlarm.cancel(this)
     }
 
     private fun onSessionEnded(newState: TimerState) {
@@ -345,6 +389,7 @@ class WearTimerService : Service() {
 
     override fun onDestroy() {
         stopTicker()
+        WearPhaseEndAlarm.cancel(this)
         serviceScope.cancel()
         super.onDestroy()
     }

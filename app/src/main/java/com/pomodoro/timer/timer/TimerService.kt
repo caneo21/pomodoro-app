@@ -21,6 +21,8 @@ import com.pomodoro.timer.core.TimerDefaults
 import com.pomodoro.timer.core.TimerEngine
 import com.pomodoro.timer.core.TimerPhase
 import com.pomodoro.timer.core.TimerState
+import com.pomodoro.timer.core.TimerTransition
+import com.pomodoro.timer.core.phaseEndAlarmAtMillis
 import com.pomodoro.timer.core.SyncCoordinator
 import com.pomodoro.timer.core.SyncPayload
 import com.pomodoro.timer.settings.TimerSettingsRepository
@@ -46,6 +48,7 @@ class TimerService : Service() {
         const val ACTION_PAUSE = "com.pomodoro.timer.action.PAUSE"
         const val ACTION_RESET = "com.pomodoro.timer.action.RESET"
         const val ACTION_UPDATE_DURATIONS = "com.pomodoro.timer.action.UPDATE_DURATIONS"
+        const val ACTION_PHASE_END_ALARM = "com.pomodoro.timer.action.PHASE_END_ALARM"
         const val EXTRA_FOCUS_MINUTES = "extra_focus_minutes"
         const val EXTRA_BREAK_MINUTES = "extra_break_minutes"
         const val EXTRA_LONG_BREAK_MINUTES = "extra_long_break_minutes"
@@ -98,6 +101,7 @@ class TimerService : Service() {
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var tickerJob: Job? = null
+    private var inForeground = false
     private lateinit var syncCoordinator: SyncCoordinator
     private lateinit var settingsRepository: TimerSettingsRepository
 
@@ -136,6 +140,7 @@ class TimerService : Service() {
         }
         _state.value = engine.adoptRemote(payload, System.currentTimeMillis())
         if (_state.value.isRunning) startTicker() else stopTicker()
+        syncPhaseEndAlarm(_state.value)
         updateOngoingNotification(_state.value)
     }
 
@@ -167,9 +172,19 @@ class TimerService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // Every command arrives via startForegroundService, which obliges us to enter the
-        // foreground within ~5s regardless of which action it was.
-        startForeground(ONGOING_NOTIFICATION_ID, buildOngoingNotification(_state.value))
+        // Every user command arrives via startForegroundService, which obliges us to enter the
+        // foreground within ~5s regardless of which action it was. The phase-end alarm uses plain
+        // startService while we are already in the foreground, so it only needs this if the service
+        // instance was recreated in the meantime (exact alarms permit a background foreground start;
+        // if that is refused the tick still runs, just without a foreground service).
+        if (intent?.action != ACTION_PHASE_END_ALARM) {
+            startForeground(ONGOING_NOTIFICATION_ID, buildOngoingNotification(_state.value))
+            inForeground = true
+        } else if (!inForeground) {
+            inForeground = runCatching {
+                startForeground(ONGOING_NOTIFICATION_ID, buildOngoingNotification(_state.value))
+            }.isSuccess
+        }
 
         // On a freshly-created service, the engine still holds only its hardcoded defaults until
         // the coordinator's cold-start seed resolves; acting on this action before that happens
@@ -182,26 +197,38 @@ class TimerService : Service() {
         return START_NOT_STICKY
     }
 
-    private fun handleAction(intent: Intent?) {
+    private suspend fun handleAction(intent: Intent?) {
         val now = System.currentTimeMillis()
         when (intent?.action) {
             ACTION_START -> {
                 _state.value = engine.start(now)
                 updateOngoingNotification(_state.value)
                 startTicker()
+                syncPhaseEndAlarm(_state.value)
                 publishSyncState(_state.value, now)
             }
             ACTION_PAUSE -> {
                 _state.value = engine.pause(now)
                 stopTicker()
+                syncPhaseEndAlarm(_state.value)
                 updateOngoingNotification(_state.value)
                 publishSyncState(_state.value, now)
+            }
+            ACTION_PHASE_END_ALARM -> {
+                try {
+                    processTick()
+                    if (_state.value.isRunning) startTicker()
+                } finally {
+                    PhaseEndAlarmReceiver.releaseWakeLock()
+                }
             }
             ACTION_RESET -> {
                 _state.value = engine.reset(now)
                 publishSyncState(_state.value, now)
                 stopTicker()
+                syncPhaseEndAlarm(_state.value)
                 stopForeground(STOP_FOREGROUND_REMOVE)
+                inForeground = false
                 stopSelf()
             }
             ACTION_UPDATE_DURATIONS -> {
@@ -233,6 +260,7 @@ class TimerService : Service() {
                 publishSyncState(_state.value, now)
                 if (!_state.value.isRunning) {
                     stopForeground(STOP_FOREGROUND_REMOVE)
+                    inForeground = false
                     stopSelf()
                 } else {
                     updateOngoingNotification(_state.value)
@@ -246,32 +274,46 @@ class TimerService : Service() {
         tickerJob = serviceScope.launch {
             while (true) {
                 delay(TICK_INTERVAL_MILLIS)
-                val previousPhase = _state.value.phase
-                val newState = engine.tick(System.currentTimeMillis())
-                _state.value = newState
-                if (newState.phase != previousPhase) {
-                    showSessionEndNotification(newState.phase)
-                    if (previousPhase == TimerPhase.FOCUS) {
-                        val today = LocalDate.now().toString()
-                        serviceScope.launch {
-                            val (previous, updated) = settingsRepository.recordDailyGoalCompletion(today)
-                            dailyGoalProgress = updated
-                            if (dailyGoalEnabled && DailyGoalTracker.justReachedGoal(previous.count, updated.count, dailyGoalTarget)) {
-                                showDailyGoalReachedNotification(dailyGoalTarget)
-                            }
-                            publishSyncState(newState, System.currentTimeMillis())
-                        }
-                    } else {
-                        publishSyncState(newState, System.currentTimeMillis())
-                    }
-                }
-                updateOngoingNotification(newState)
-                if (!newState.isRunning) {
+                processTick()
+                if (!_state.value.isRunning) {
                     tickerJob = null
                     return@launch
                 }
             }
         }
+    }
+
+    /**
+     * Advances the engine to now and reacts to any phase boundaries crossed since the last tick. Runs
+     * from both the 1-second ticker and the phase-end alarm (both on the main thread), and compares
+     * against [_state] so whichever gets there first handles a boundary exactly once.
+     */
+    private suspend fun processTick() {
+        val previous = _state.value
+        val newState = engine.tick(System.currentTimeMillis())
+        _state.value = newState
+        val transition = TimerTransition.between(previous, newState)
+        if (transition.crossedBoundary) {
+            showSessionEndNotification(newState.phase)
+            syncPhaseEndAlarm(newState)
+            if (transition.focusSessionsCompleted > 0) {
+                val today = LocalDate.now().toString()
+                val (before, updated) = settingsRepository.recordDailyGoalCompletion(
+                    today, transition.focusSessionsCompleted
+                )
+                dailyGoalProgress = updated
+                if (dailyGoalEnabled && DailyGoalTracker.justReachedGoal(before.count, updated.count, dailyGoalTarget)) {
+                    showDailyGoalReachedNotification(dailyGoalTarget)
+                }
+            }
+            publishSyncState(newState, System.currentTimeMillis())
+        }
+        updateOngoingNotification(newState)
+    }
+
+    private fun syncPhaseEndAlarm(state: TimerState) {
+        val triggerAt = phaseEndAlarmAtMillis(state, System.currentTimeMillis())
+        if (triggerAt != null) PhaseEndAlarm.schedule(this, triggerAt) else PhaseEndAlarm.cancel(this)
     }
 
     private fun stopTicker() {
@@ -370,6 +412,7 @@ class TimerService : Service() {
 
     override fun onDestroy() {
         stopTicker()
+        PhaseEndAlarm.cancel(this)
         serviceScope.cancel()
         super.onDestroy()
     }

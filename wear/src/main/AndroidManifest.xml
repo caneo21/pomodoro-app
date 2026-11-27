@@ -8,6 +8,11 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Exact phase-end alarms: auto-granted on API 31-32; USE_EXACT_ALARM covers API 33+ for a timer app. -->
+    <uses-permission
+        android:name="android.permission.SCHEDULE_EXACT_ALARM"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
 
     <application
         android:allowBackup="true"
@@ -42,6 +47,10 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Pomodoro focus/break countdown timer" />
         </service>
+
+        <receiver
+            android:name=".timer.WearPhaseEndAlarmReceiver"
+            android:exported="false" />
 
     </application>
 </manifest>
