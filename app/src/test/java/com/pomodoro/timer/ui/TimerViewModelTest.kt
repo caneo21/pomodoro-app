@@ -10,7 +10,9 @@ import com.pomodoro.timer.core.TimerState
 import com.pomodoro.timer.settings.TimerSettings
 import com.pomodoro.timer.settings.TimerSettingsRepository
 import com.pomodoro.timer.timer.TimerService
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,6 +38,7 @@ class TimerViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
     private val createdViewModels = mutableListOf<TimerViewModel>()
+    private val dataStoreJobs = mutableListOf<Job>()
 
     @Before
     fun setUp() {
@@ -48,13 +51,20 @@ class TimerViewModelTest {
         // equivalent the collector outlives the test and reads a deleted TemporaryFolder.
         createdViewModels.forEach { it.viewModelScope.cancel() }
         createdViewModels.clear()
+        dataStoreJobs.forEach { it.cancel() }
+        dataStoreJobs.clear()
         dispatcher.scheduler.advanceUntilIdle()
         Dispatchers.resetMain()
     }
 
     private fun newRepository(): TimerSettingsRepository {
         val file = File(tempFolder.newFolder(), "settings.preferences_pb")
-        val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.create { file }
+        // DataStore's default scope runs on Dispatchers.IO, racing the virtual-time test dispatcher:
+        // a write's emission could be missed and uiState.first { } would hang until runTest's 1-minute
+        // timeout (about 1 run in 10). On the test scheduler its work is ordered with the test body.
+        val job = Job().also { dataStoreJobs.add(it) }
+        val dataStore: DataStore<Preferences> =
+            PreferenceDataStoreFactory.create(scope = CoroutineScope(dispatcher + job)) { file }
         return TimerSettingsRepository(dataStore)
     }
 
