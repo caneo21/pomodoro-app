@@ -2,7 +2,9 @@ using System.Runtime.InteropServices;
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using PomodoroWindows.Core;
 using Windows.Graphics;
 using Windows.Storage;
 
@@ -36,6 +38,70 @@ public sealed partial class MainWindow : Window
     public static MainWindow? Current { get; private set; }
 
     public bool AllowClose { get; set; }
+
+    // "New version available" banner. Hidden while a session runs (it would pull attention away
+    // from focusing) and in mini mode (no room); it comes back when neither applies.
+    // Only re-lays the window out when the banner actually opens, closes, or changes release, so
+    // Start/Pause with no pending update never resizes a window the user has sized by hand.
+    private readonly UpdateBannerState _updateBanner = new();
+    private double? _lastContentWidthDips;
+    private double? _lastContentHeightDips;
+
+    /// <summary>Raised with the release's tag when the user closes the banner with its X button.</summary>
+    public event Action<string>? UpdateDismissed;
+
+    public void SetUpdateRelease(LatestRelease? release)
+    {
+        if (_updateBanner.SetRelease(release)) ApplyUpdateBanner();
+    }
+
+    public void SetTimerRunning(bool isRunning)
+    {
+        if (_updateBanner.SetTimerRunning(isRunning)) ApplyUpdateBanner();
+    }
+
+    private void ApplyUpdateBanner()
+    {
+        if (_updateBanner.Release is { } release)
+        {
+            UpdateInfoBar.Message = $"새 버전 {release.Tag}이 있어요";
+        }
+        UpdateInfoBar.IsOpen = _updateBanner.IsOpen;
+        RefitToLastContent();
+    }
+
+    private void UpdateInfoBar_Closed(InfoBar sender, InfoBarClosedEventArgs args)
+    {
+        // Programmatic closes (session started, mini mode) only hide it for now; the X button
+        // dismisses this version for good.
+        if (args.Reason != InfoBarCloseReason.CloseButton || _updateBanner.Release is not { } release) return;
+        _updateBanner.SetRelease(null);
+        UpdateDismissed?.Invoke(release.Tag);
+        RefitToLastContent();
+    }
+
+    private async void UpdateDownloadButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_updateBanner.Release is { } release && Uri.TryCreate(release.Url, UriKind.Absolute, out var uri))
+        {
+            await Windows.System.Launcher.LaunchUriAsync(uri);
+        }
+    }
+
+    // The open banner's height follows the window width (its message wraps), so refit when that
+    // height changes; width-only changes come from the user resizing and must not snap the window.
+    private void UpdateInfoBar_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (UpdateInfoBar.IsOpen && e.NewSize.Height != e.PreviousSize.Height) RefitToLastContent();
+    }
+
+    private void RefitToLastContent()
+    {
+        if (_lastContentWidthDips is { } width && _lastContentHeightDips is { } height)
+        {
+            FitToContent(width, height);
+        }
+    }
 
     public MainWindow()
     {
@@ -90,8 +156,15 @@ public sealed partial class MainWindow : Window
     // the actual minimum it needs instead of a guessed placeholder size.
     public void FitToContent(double contentWidthDips, double contentHeightDips)
     {
+        _lastContentWidthDips = contentWidthDips;
+        _lastContentHeightDips = contentHeightDips;
+        var infoBarHeightDips = UpdateInfoBar.IsOpen
+            ? (int)Math.Ceiling(UpdateInfoBar.ActualHeight + UpdateInfoBar.Margin.Top + UpdateInfoBar.Margin.Bottom)
+            : 0;
         var width = Math.Max((int)Math.Ceiling(contentWidthDips) + ContentHorizontalPaddingDips, MinWindowWidthDips);
-        var height = Math.Max((int)Math.Ceiling(contentHeightDips) + TitleBarHeightDips + ContentVerticalPaddingDips, MinWindowHeightDips);
+        var height = Math.Max(
+            (int)Math.Ceiling(contentHeightDips) + TitleBarHeightDips + ContentVerticalPaddingDips + infoBarHeightDips,
+            MinWindowHeightDips);
 
         _suppressPositionSave = true;
         if (_hasCustomPosition)
@@ -131,6 +204,7 @@ public sealed partial class MainWindow : Window
     private void TimerPage_MiniModeChanged(object? sender, bool isMiniMode)
     {
         ModeToggleButton.Content = isMiniMode ? "전체" : "미니";
+        if (_updateBanner.SetMiniMode(isMiniMode)) ApplyUpdateBanner();
         // Windows only ever blurs the desktop wallpaper through a backdrop, never other apps'
         // actual window content (removed for privacy reasons since the Aero Glass era) — so this
         // just gives the mini widget the standard frosted-glass look, not literal see-through.

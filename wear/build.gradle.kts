@@ -4,6 +4,9 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+@Suppress("UNCHECKED_CAST")
+val releaseSigning = rootProject.extra["releaseSigning"] as Map<String, String>?
+
 android {
     namespace = "com.pomodoro.timer.wear"
     compileSdk = 35
@@ -14,15 +17,37 @@ android {
         applicationId = "com.pomodoro.timer"
         minSdk = 30
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = rootProject.extra["appVersionCode"] as Int
+        versionName = rootProject.extra["appVersionName"] as String
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    // Signed with the phone's key: the Wearable Data Layer only pairs apps with the same certificate.
+    signingConfigs {
+        if (releaseSigning != null) {
+            create("release") {
+                storeFile = file(releaseSigning.getValue("storeFile"))
+                storePassword = releaseSigning.getValue("storePassword")
+                keyAlias = releaseSigning.getValue("keyAlias")
+                keyPassword = releaseSigning.getValue("keyPassword")
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
+            if (releaseSigning != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
+    }
+
+    lint {
+        // androidx.lifecycle's NonNullableMutableLiveDataDetector crashes lint under Kotlin 2.0
+        // ("Found class KaCallableMemberCall, but interface was expected"), failing release builds.
+        // This module uses no LiveData, so the check has nothing to find here anyway.
+        disable += "NullSafeMutableLiveData"
     }
 
     compileOptions {
@@ -51,6 +76,8 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
     implementation("androidx.activity:activity-compose:1.9.3")
+    // ActivityResult APIs need Fragment >= 1.3.0 (lint InvalidFragmentVersionForActivityResult), same as :app.
+    implementation("androidx.fragment:fragment-ktx:1.8.5")
     implementation(platform("androidx.compose:compose-bom:2025.08.01"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")

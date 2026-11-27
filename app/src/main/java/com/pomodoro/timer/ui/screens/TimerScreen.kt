@@ -27,6 +27,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.pomodoro.timer.core.LatestRelease
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -71,7 +72,10 @@ fun TimerScreen(
     onPause: () -> Unit,
     onReset: () -> Unit,
     onSettingsClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    updateBanner: LatestRelease? = null,
+    onUpdateDownload: () -> Unit = {},
+    onUpdateDismiss: () -> Unit = {}
 ) {
     val view = LocalView.current
     DisposableEffect(uiState.keepScreenOn, uiState.isRunning) {
@@ -122,6 +126,16 @@ fun TimerScreen(
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+        }
+
+        // Only while idle: a banner mid-session would pull attention away from focusing.
+        if (updateBanner != null && !uiState.isRunning) {
+            UpdateBanner(
+                release = updateBanner,
+                onDownload = onUpdateDownload,
+                onDismiss = onUpdateDismiss,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
         }
 
         Column(

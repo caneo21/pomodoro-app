@@ -5,6 +5,7 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="40"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
@@ -22,6 +23,14 @@
                     VerticalAlignment="Center" Margin="0,0,4,0" Padding="12,4" FontSize="12" CornerRadius="999"/>
         </Grid>
 
-        <Frame x:Name="RootFrame" x:FieldModifier="public" Grid.Row="1"/>
+        <InfoBar x:Name="UpdateInfoBar" Grid.Row="1" Margin="12,0,12,8"
+                 IsOpen="False" IsClosable="True" IsIconVisible="False" Severity="Informational"
+                 Closed="UpdateInfoBar_Closed" SizeChanged="UpdateInfoBar_SizeChanged">
+            <InfoBar.ActionButton>
+                <Button Content="다운로드" Click="UpdateDownloadButton_Click"/>
+            </InfoBar.ActionButton>
+        </InfoBar>
+
+        <Frame x:Name="RootFrame" x:FieldModifier="public" Grid.Row="2"/>
     </Grid>
 </Window>

@@ -3,11 +3,13 @@ package com.pomodoro.timer
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.pomodoro.timer.ui.TimerViewModel
+import com.pomodoro.timer.update.UpdateViewModel
 import com.pomodoro.timer.ui.screens.SettingsScreen
 import com.pomodoro.timer.ui.screens.TimerScreen
 import com.pomodoro.timer.ui.screens.onboarding.OnboardingScreen
@@ -27,8 +29,10 @@ internal fun onboardingFinishAction(isFirstRun: Boolean): OnboardingFinishAction
     if (isFirstRun) OnboardingFinishAction.CompleteAndShowTimer else OnboardingFinishAction.ReturnToSettings
 
 @Composable
-fun PomodoroApp(viewModel: TimerViewModel) {
+fun PomodoroApp(viewModel: TimerViewModel, updateViewModel: UpdateViewModel) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val updateBanner by updateViewModel.banner.collectAsStateWithLifecycle()
+    val uriHandler = LocalUriHandler.current
 
     // uiState starts as the TimerUiState() default before the first DataStore emission
     // arrives. Rendering nothing here (the caller's Surface already paints the themed
@@ -51,7 +55,10 @@ fun PomodoroApp(viewModel: TimerViewModel) {
                 onStart = viewModel::start,
                 onPause = viewModel::pause,
                 onReset = viewModel::reset,
-                onSettingsClick = { navController.navigate(Routes.SETTINGS) }
+                onSettingsClick = { navController.navigate(Routes.SETTINGS) },
+                updateBanner = updateBanner,
+                onUpdateDownload = { updateBanner?.let { uriHandler.openUri(it.url) } },
+                onUpdateDismiss = updateViewModel::dismiss
             )
         }
         composable(Routes.SETTINGS) {
@@ -83,6 +90,7 @@ fun PomodoroApp(viewModel: TimerViewModel) {
                 colorTheme = uiState.colorTheme,
                 onColorThemeChange = viewModel::updateColorTheme,
                 onReplayOnboarding = { navController.navigate(Routes.ONBOARDING) },
+                appVersion = BuildConfig.VERSION_NAME,
                 onBack = { navController.popBackStack() }
             )
         }
