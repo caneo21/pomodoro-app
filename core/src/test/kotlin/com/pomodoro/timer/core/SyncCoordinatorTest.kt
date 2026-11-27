@@ -280,4 +280,51 @@ class SyncCoordinatorTest {
         coordinator.awaitInitialSync()
         job.cancel()
     }
+
+    @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun `the seed is skipped when a shared ledger already adopted that payload in the background`() = runTest {
+        val stored = payload(1_000L, isRunning = false)
+        val ledger = SyncLedger()
+        assertEquals(BackgroundSyncAction.ADOPT, ledger.offerFromBackground(stored, serviceAlive = false))
+        val received = mutableListOf<SyncPayload>()
+        val coordinator = SyncCoordinator(FakeSyncTransport(storedRemoteState = stored), this, ledger) { received.add(it) }
+
+        val job = coordinator.start()
+        coordinator.awaitInitialSync()
+        advanceUntilIdle()
+
+        assertEquals(emptyList<SyncPayload>(), received)
+        job.cancel()
+    }
+
+    @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun `the seed still adopts a stored payload newer than the shared ledger`() = runTest {
+        val ledger = SyncLedger().apply { recordLocal(payload(1_000L)) }
+        val received = mutableListOf<SyncPayload>()
+        val coordinator = SyncCoordinator(FakeSyncTransport(storedRemoteState = payload(2_000L)), this, ledger) {
+            received.add(it)
+        }
+
+        val job = coordinator.start()
+        coordinator.awaitInitialSync()
+        advanceUntilIdle()
+
+        assertEquals(listOf(2_000L), received.map { it.lastActionAtMillis })
+        assertEquals(2_000L, ledger.current?.lastActionAtMillis)
+        job.cancel()
+    }
+
+    @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun `a local publish through the coordinator makes the background listener ignore its echo`() = runTest {
+        val ledger = SyncLedger()
+        val coordinator = SyncCoordinator(FakeSyncTransport(), this, ledger) {}
+
+        coordinator.publishLocalState(payload(5_000L))
+        advanceUntilIdle()
+
+        assertEquals(BackgroundSyncAction.IGNORE, ledger.offerFromBackground(payload(5_000L), serviceAlive = false))
+    }
 }
