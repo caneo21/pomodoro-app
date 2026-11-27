@@ -12,9 +12,11 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
+import com.pomodoro.timer.core.LatestRelease
 import com.pomodoro.timer.core.TimerPhase
 import com.pomodoro.timer.ui.TimerUiState
 import com.pomodoro.timer.ui.theme.PomodoroTheme
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -295,5 +297,54 @@ class TimerScreenTest {
 
         composeRule.waitForIdle()
         assertFalse(view.keepScreenOn)
+    }
+    private fun setUpdateBannerContent(
+        isRunning: Boolean,
+        onDownload: () -> Unit = {},
+        onDismiss: () -> Unit = {}
+    ) {
+        composeRule.setContent {
+            PomodoroTheme {
+                TimerScreen(
+                    uiState = TimerUiState(phase = TimerPhase.FOCUS, isRunning = isRunning, remainingMillis = 1_500_000L, totalMillis = 1_500_000L),
+                    onStart = {},
+                    onPause = {},
+                    onReset = {},
+                    onSettingsClick = {},
+                    updateBanner = LatestRelease("v1.2.0", "u"),
+                    onUpdateDownload = onDownload,
+                    onUpdateDismiss = onDismiss
+                )
+            }
+        }
+    }
+
+    @Test
+    fun updateBanner_isShownWhenIdle() {
+        setUpdateBannerContent(isRunning = false)
+
+        composeRule.onNodeWithText("새 버전 v1.2.0이 있어요").assertExists()
+        composeRule.onNodeWithText("다운로드").assertExists()
+        composeRule.onNodeWithText("닫기").assertExists()
+    }
+
+    @Test
+    fun updateBanner_isHiddenWhenRunning() {
+        setUpdateBannerContent(isRunning = true)
+
+        composeRule.onNodeWithText("새 버전 v1.2.0이 있어요").assertDoesNotExist()
+    }
+
+    @Test
+    fun updateBanner_buttonsInvokeCallbacks() {
+        var downloads = 0
+        var dismissals = 0
+        setUpdateBannerContent(isRunning = false, onDownload = { downloads++ }, onDismiss = { dismissals++ })
+
+        composeRule.onNodeWithText("다운로드").performClick()
+        composeRule.onNodeWithText("닫기").performClick()
+
+        assertEquals(1, downloads)
+        assertEquals(1, dismissals)
     }
 }

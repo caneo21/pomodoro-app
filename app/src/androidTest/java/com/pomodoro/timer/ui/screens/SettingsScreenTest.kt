@@ -2,6 +2,7 @@ package com.pomodoro.timer.ui.screens
 
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import com.pomodoro.timer.core.ColorTheme
@@ -235,5 +236,23 @@ class SettingsScreenTest {
 
         composeRule.onNodeWithTag("replayOnboardingButton").performScrollTo().performClick()
         assertTrue(replayClicked)
+    }
+
+    @Test
+    fun settings_showsCurrentVersion() {
+        composeRule.setContent {
+            PomodoroTheme {
+                SettingsScreen(
+                    focusMinutes = 25,
+                    breakMinutes = 5,
+                    onFocusMinutesChange = {},
+                    onBreakMinutesChange = {},
+                    appVersion = "1.2.0",
+                    onBack = {}
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("현재 버전 1.2.0").performScrollTo().assertExists()
     }
 }

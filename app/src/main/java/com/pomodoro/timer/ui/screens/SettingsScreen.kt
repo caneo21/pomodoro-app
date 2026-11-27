@@ -75,6 +75,7 @@ fun SettingsScreen(
     colorTheme: ColorTheme = ColorTheme.DEFAULT,
     onColorThemeChange: (ColorTheme) -> Unit = {},
     onReplayOnboarding: () -> Unit = {},
+    appVersion: String = "",
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -231,6 +232,16 @@ fun SettingsScreen(
             modifier = Modifier.fillMaxWidth().testTag("backButton")
         ) {
             Text("뒤로")
+        }
+
+        if (appVersion.isNotEmpty()) {
+            Spacer(Modifier.height(16.dp))
+            Text(
+                text = "현재 버전 $appVersion",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            )
         }
     }
 }

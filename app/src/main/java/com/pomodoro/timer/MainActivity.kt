@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pomodoro.timer.ui.TimerViewModel
 import com.pomodoro.timer.ui.theme.PomodoroTheme
+import com.pomodoro.timer.update.UpdateViewModel
 
 class MainActivity : ComponentActivity() {
 
@@ -23,6 +24,10 @@ class MainActivity : ComponentActivity() {
 
     private val viewModel: TimerViewModel by viewModels {
         TimerViewModel.Factory(applicationContext)
+    }
+
+    private val updateViewModel: UpdateViewModel by viewModels {
+        UpdateViewModel.Factory(applicationContext)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -39,7 +44,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    PomodoroApp(viewModel)
+                    PomodoroApp(viewModel, updateViewModel)
                 }
             }
         }
